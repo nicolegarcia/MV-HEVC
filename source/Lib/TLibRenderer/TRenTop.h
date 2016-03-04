@@ -38,7 +38,7 @@
 #include "../TLibCommon/CommonDef.h"
 #include "../TLibCommon/TComPicYuv.h"
 
-#if NH_3D_VSO
+#if NH_3D_VSO || NH_3D
 #include <list>
 #include <vector>
 

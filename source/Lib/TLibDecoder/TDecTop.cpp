@@ -1062,7 +1062,7 @@ Void TDecTop::decodeSliceSegment(InputNALUnit &nalu )
 
     m_pcPic->setLayerId( nalu.m_nuhLayerId );
     m_pcPic->setViewId ( getViewId() );
-#if NH_3D
+#if NH_3D || NH_3D_VSO
     m_pcPic->setViewIndex( getViewIndex() );
     m_pcPic->setIsDepth  ( getIsDepth  () );
     pcSlice->setIvPicLists( m_dpb );

@@ -215,11 +215,13 @@ TRenModel::~TRenModel()
 
 Void
 #if H_3D_VSO_EARLY_SKIP
-TRenModel::create( Int iNumOfBaseViews, Int iNumOfModels, Int iWidth, Int iHeight, Int iShiftPrec, Int iHoleMargin, Bool bEarlySkip )
+TRenModel::create( Int iNumOfBaseViews, Int iNumOfModels, Int iWidth, Int iHeight, Int iShiftPrec, Int iHoleMargin, Bool bLimOutput, Bool bEarlySkip )
 #else
-TRenModel::create( Int iNumOfBaseViews, Int iNumOfModels, Int iWidth, Int iHeight, Int iShiftPrec, Int iHoleMargin )
+TRenModel::create( Int iNumOfBaseViews, Int iNumOfModels, Int iWidth, Int iHeight, Int iShiftPrec, Int iHoleMargin, Bool bLimOutput )
 #endif
 {
+  m_bLimOutput          = bLimOutput; 
+
   m_iNumOfBaseViews     = iNumOfBaseViews;
   m_iNumOfRenModels     = iNumOfModels;
   m_iWidth              = iWidth;
@@ -415,9 +417,19 @@ TRenModel::createSingleModel( Int iBaseViewNum, Int iContent, Int iModelNum, Int
 
 
 #if H_3D_VSO_EARLY_SKIP
-  m_apcRenModels[iModelNum]->create( iMode ,m_iWidth, m_iHeight, m_iShiftPrec, m_aaaiSubPelShiftLut, m_iHoleMargin,  bUseOrgRef, iBlendMode, m_bEarlySkip );
+#if RM_INIT_FIX
+  m_apcRenModels[iModelNum]->create( iMode ,m_iWidth, m_iHeight, m_iShiftPrec, m_aaaiSubPelShiftLut, m_iHoleMargin,  bUseOrgRef, ( iMode != 2 )  ? BLEND_NONE : iBlendMode , m_bLimOutput, m_bEarlySkip );
 #else
-  m_apcRenModels[iModelNum]->create( iMode ,m_iWidth, m_iHeight, m_iShiftPrec, m_aaaiSubPelShiftLut, m_iHoleMargin,  bUseOrgRef, iBlendMode );
+  m_apcRenModels[iModelNum]->create( iMode ,m_iWidth, m_iHeight, m_iShiftPrec, m_aaaiSubPelShiftLut, m_iHoleMargin,  bUseOrgRef, iBlendMode, m_bLimOutput, m_bEarlySkip );
+#endif
+
+#else
+
+#if RM_INIT_FIX
+  m_apcRenModels[iModelNum]->create( iMode ,m_iWidth, m_iHeight, m_iShiftPrec, m_aaaiSubPelShiftLut, m_iHoleMargin,  bUseOrgRef, ( iMode != 2 )  ? BLEND_NONE : iBlendMode, m_bLimOutput );
+#else
+  m_apcRenModels[iModelNum]->create( iMode ,m_iWidth, m_iHeight, m_iShiftPrec, m_aaaiSubPelShiftLut, m_iHoleMargin,  bUseOrgRef, iBlendMode, m_bLimOutput );
+#endif
 #endif
 
   if ( iLeftViewNum != -1 )
@@ -469,7 +481,7 @@ TRenModel::setBaseView( Int iViewNum, TComPicYuv* pcPicYuvVideoData, TComPicYuv*
 }
 
 Void
-TRenModel::setSingleModel( Int iModelNum, Int** ppiShiftLutLeft, Int** ppiBaseShiftLutLeft, Int** ppiShiftLutRight, Int** ppiBaseShiftLutRight, Int iDistToLeft, TComPicYuv* pcPicYuvRefView )
+TRenModel::setSingleModel( Int iModelNum, Int** ppiShiftLutLeft, Int** ppiBaseShiftLutLeft, Int** ppiShiftLutRight, Int** ppiBaseShiftLutRight, Int iDistToLeft, TComPicYuv* pcPicYuvRefView, Int iEncViewSIdx)
 {
   AOT( iModelNum < 0 || iModelNum > m_iNumOfRenModels );
 
@@ -485,7 +497,6 @@ TRenModel::setSingleModel( Int iModelNum, Int** ppiShiftLutLeft, Int** ppiBaseSh
 
     if ( m_aaeBaseViewPosInModel[iBaseViewIdx][iModelNum] != VIEWPOS_INVALID )
     {
-      bAnyRefFromOrg = true;
       m_apcRenModels[iModelNum]->setLRView( m_aaeBaseViewPosInModel[iBaseViewIdx][iModelNum],
         ( bSetupFromOrgVideo ? m_aapiOrgVideoPel   : m_aapiCurVideoPel   ) [iBaseViewIdx],
         ( bSetupFromOrgVideo ? m_aaiOrgVideoStrides: m_aaiCurVideoStrides) [iBaseViewIdx],
@@ -494,12 +505,11 @@ TRenModel::setSingleModel( Int iModelNum, Int** ppiShiftLutLeft, Int** ppiBaseSh
     }
   }
 
-  m_apcRenModels[iModelNum]->setup     ( pcPicYuvRefView, ppiShiftLutLeft, ppiBaseShiftLutLeft, ppiShiftLutRight, ppiBaseShiftLutRight, iDistToLeft, false );
+  // Render
+#if !RM_FIX_SETUP
+  m_apcRenModels[iModelNum]->setupLutAndRef(  pcPicYuvRefView, ppiShiftLutLeft, ppiBaseShiftLutLeft, ppiShiftLutRight, ppiBaseShiftLutRight, iDistToLeft, bAnyRefFromOrg );
 
-  // Setup to Org
-  if ( bAnyRefFromOrg )
-  {
-    // Restore old values
+  // Setup with actual data  
     for (Int iBaseViewIdx = 0; iBaseViewIdx < m_iNumOfBaseViews; iBaseViewIdx++ )
     {
       if ( m_aaeBaseViewPosInModel[iBaseViewIdx][iModelNum] != VIEWPOS_INVALID )
@@ -513,10 +523,70 @@ TRenModel::setSingleModel( Int iModelNum, Int** ppiShiftLutLeft, Int** ppiBaseSh
         );
       }
     }
+  // Render initial state
+  AOT( m_bLimOutput && m_aaeBaseViewPosInModel[ iEncViewSIdx ][iModelNum] == VIEWPOS_INVALID );
+  m_apcRenModels[iModelNum]->setupInitialState( m_bLimOutput ? m_aaeBaseViewPosInModel[ iEncViewSIdx ][iModelNum] : VIEWPOS_INVALID );  
 
-    // setup keeping reference rendered from original data
-    m_apcRenModels[iModelNum]->setup     ( pcPicYuvRefView, ppiShiftLutLeft, ppiBaseShiftLutLeft, ppiShiftLutRight, ppiBaseShiftLutRight, iDistToLeft, true );
+#else
+  m_apcRenModels[iModelNum]->setupLut(  ppiShiftLutLeft, ppiBaseShiftLutLeft, ppiShiftLutRight, ppiBaseShiftLutRight, iDistToLeft );
+  
+  // Copy yuv to reference if given.
+  AOT( pcPicYuvRefView != NULL && bAnyRefFromOrg );
+  
+  if (pcPicYuvRefView )
+  {
+    m_apcRenModels[iModelNum]->setupRefView( pcPicYuvRefView );
   }
+
+  m_apcRenModels[iModelNum]->renderAll( ); 
+
+  // pcPicYuvRefView != NULL &&  bAnyRefFromOrg --> invalid combination
+  // pcPicYuvRefView != NULL && !bAnyRefFromOrg --> distortion correct; reference view correct; current view correct
+  // pcPicYuvRefView == NULL &&  bAnyRefFromOrg --> distortion TBD    ; reference view TBD    ; current view TBD
+  // pcPicYuvRefView == NULL && !bAnyRefFromOrg --> distortion TBD    ; reference view TBD    ; current view correct
+
+  if ( pcPicYuvRefView == NULL )
+  {
+    // Update reference view
+    m_apcRenModels[iModelNum]->setStructSynthViewAsRefView();  
+
+    // pcPicYuvRefView != NULL &&  bAnyRefFromOrg --> invalid combination
+    // pcPicYuvRefView != NULL && !bAnyRefFromOrg --> distortion correct; reference view correct; current view correct
+    // pcPicYuvRefView == NULL &&  bAnyRefFromOrg --> distortion TBD    ; reference view correct; current view TBD
+    // pcPicYuvRefView == NULL && !bAnyRefFromOrg --> distortion TBD    ; reference view correct; current view correct
+
+    if ( bAnyRefFromOrg )
+    {    
+      // Update current view and distortion 
+      for (Int iBaseViewIdx = 0; iBaseViewIdx < m_iNumOfBaseViews; iBaseViewIdx++ )
+      {
+        if ( m_aaeBaseViewPosInModel[iBaseViewIdx][iModelNum] != VIEWPOS_INVALID )
+        {
+          m_apcRenModels[iModelNum]->setLRView(
+            m_aaeBaseViewPosInModel[iBaseViewIdx][iModelNum],
+            m_aapiCurVideoPel      [iBaseViewIdx],
+            m_aaiCurVideoStrides   [iBaseViewIdx],
+            m_apiCurDepthPel       [iBaseViewIdx],
+            m_aiCurDepthStrides    [iBaseViewIdx]
+          );
+        }
+      }
+      m_apcRenModels[iModelNum]->renderAll( );
+    }
+    else
+    {
+      // Update to distortion
+      m_apcRenModels[iModelNum]->resetStructError();
+    }
+  }      
+
+  if ( m_bLimOutput )
+  {
+    AOT( m_aaeBaseViewPosInModel[ iEncViewSIdx ][iModelNum] == VIEWPOS_INVALID );
+    Int curViewPosInModel = m_aaeBaseViewPosInModel[ iEncViewSIdx ][iModelNum];    
+    m_apcRenModels[iModelNum]->setLimOutStruct( (curViewPosInModel == VIEWPOS_RIGHT)  ? VIEWPOS_LEFT : VIEWPOS_RIGHT );
+  }  
+#endif
 }
 
 Void
@@ -548,7 +618,7 @@ TRenModel::setErrorMode( Int iView, Int iContent, int iPlane )
 Void
 TRenModel::setupPart ( UInt uiHorOff, Int iUsedHeight )
 {
-  AOT( iUsedHeight > m_iHeight );     
+//  AOT( iUsedHeight > m_iHeight );     
   m_uiHorOff    = uiHorOff; 
   m_iUsedHeight = iUsedHeight; 
 }
@@ -588,8 +658,7 @@ TRenModel::getDist( Int iStartPosX, Int iStartPosY, Int iWidth, Int iHeight, Int
       iDist +=  m_apcCurRenModels[iModelNum]->getDistVideo  ( m_aiCurPosInModels[iModelNum], m_iCurrentPlane ,iStartPosX, iStartPosY, iWidth, iHeight, iStride, piNewData );
     }
   }
-
-  return ( iDist + (m_iNumOfCurRenModels >> 1) ) / m_iNumOfCurRenModels;
+  return m_iNumOfCurRenModels > 0 ? ( iDist + (m_iNumOfCurRenModels >> 1) ) / m_iNumOfCurRenModels : 0;
 }
 
 Void

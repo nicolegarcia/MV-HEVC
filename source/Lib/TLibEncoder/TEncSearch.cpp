@@ -1646,7 +1646,7 @@ TEncSearch::xRecurIntraCodingLumaQT(TComYuv*    pcOrgYuv,
         {
           UInt uiSingleBits = xGetIntraBitsQT( rTu, true, false, false );
 #if NH_3D_VSO // M NEW 
-          if ( m_pcRdCost->getUseRenModel() )
+          if ( m_pcRdCost->getUseLambdaScaleVSO() )
           {
             singleCostTmp     = m_pcRdCost->calcRdCostVSO( uiSingleBits, singleDistTmpLuma );
           }
@@ -1886,7 +1886,11 @@ TEncSearch::xRecurIntraCodingLumaQT(TComYuv*    pcOrgYuv,
 }
 
 #if NH_3D_DIS
-Void TEncSearch::xIntraCodingDIS( TComDataCU* pcCU, UInt uiAbsPartIdx, TComYuv* pcOrgYuv, TComYuv* pcPredYuv, Dist& ruiDist, Double& dRDCost, UInt uiPredMode )
+#if NH_3D_VSO
+Void TEncSearch::xIntraCodingDIS( TComDataCU* pcCU, UInt uiAbsPartIdx, TComYuv* pcOrgYuv, TComYuv* pcPredYuv, Dist&       ruiDist, Double& dRDCost, UInt uiPredMode )
+#else
+Void TEncSearch::xIntraCodingDIS( TComDataCU* pcCU, UInt uiAbsPartIdx, TComYuv* pcOrgYuv, TComYuv* pcPredYuv, Distortion& ruiDist, Double& dRDCost, UInt uiPredMode )
+#endif
 {
   UInt    uiWidth           = pcCU     ->getWidth   ( 0 );
   UInt    uiHeight          = pcCU     ->getHeight  ( 0 );
@@ -1981,7 +1985,13 @@ Void TEncSearch::xIntraCodingDIS( TComDataCU* pcCU, UInt uiAbsPartIdx, TComYuv* 
 }
 #endif
 #if NH_3D_SDC_INTRA
-Void TEncSearch::xIntraCodingSDC( TComDataCU* pcCU, UInt uiAbsPartIdx, TComYuv* pcOrgYuv, TComYuv* pcPredYuv, Dist& ruiDist, Double& dRDCost, Bool bZeroResidual, Int iSDCDeltaResi  )
+#if NH_3D_VSO
+Void TEncSearch::xIntraCodingSDC( TComDataCU* pcCU, UInt uiAbsPartIdx, TComYuv* pcOrgYuv, TComYuv* pcPredYuv, Dist&       ruiDist, Double& dRDCost, Bool bZeroResidual, Int iSDCDeltaResi  )
+#else
+Void TEncSearch::xIntraCodingSDC( TComDataCU* pcCU, UInt uiAbsPartIdx, TComYuv* pcOrgYuv, TComYuv* pcPredYuv, Distortion& ruiDist, Double& dRDCost, Bool bZeroResidual, Int iSDCDeltaResi  )
+#endif
+
+
 {
   UInt uiWidth        = pcCU->getWidth ( 0 );
   UInt uiHeight       = pcCU->getHeight( 0 );
@@ -2214,7 +2224,11 @@ Void TEncSearch::xIntraCodingSDC( TComDataCU* pcCU, UInt uiAbsPartIdx, TComYuv* 
   else
 #endif
   {
+#if NH_3D_FIX_INTRA_SDC_VSO_OFF
+    ruiDist = m_pcRdCost->getDistPart( bitDepthY, piPred, uiStride, piOrg, uiStride, uiWidth, uiHeight, COMPONENT_Y );
+#else
     ruiDist = m_pcRdCost->getDistPart( bitDepthY, piPred, uiStride, piOrg, uiStride, uiWidth, uiHeight, COMPONENT_Y, DF_SAD );
+#endif
   }
 
   //===== determine rate and r-d cost =====
@@ -2742,12 +2756,19 @@ Void TEncSearch::estIntraPredDIS( TComDataCU* pcCU,
 #if NH_3D_VSO // M36
   Pel* piOrg         = pcOrgYuv ->getAddr(COMPONENT_Y, 0, uiWidth );
   UInt uiStride      = pcPredYuv->getStride(COMPONENT_Y);
-#endif
+
   Dist   uiDist = 0;
   Double dCost   = 0.0;
   Dist    uiBestDist = 0;
   Double  dBestCost   = MAX_DOUBLE;
   UInt     uiBestDISType = 0;
+#else
+  Distortion   uiDist = 0;
+  Double       dCost   = 0.0;
+  Distortion   uiBestDist = 0;
+  Double       dBestCost   = MAX_DOUBLE;
+  UInt         uiBestDISType = 0;
+#endif
 
   for( UInt uiPredMode = 0; uiPredMode < 4 ; uiPredMode++ )
   {
@@ -6315,7 +6336,11 @@ Void TEncSearch::encodeResAndCalcRdInterSDCCU( TComDataCU* pcCU, TComYuv* pcOrg,
     pRecCr += uiStrideC;
   }
 
-  Dist ruiDist;
+#if NH_3D_VSO
+    Dist ruiDist;
+#else
+    Distortion ruiDist;
+#endif
   Double rdCost;
 #if NH_3D_VSO // M13
   if ( m_pcRdCost->getUseVSO() )
@@ -6786,7 +6811,7 @@ Void TEncSearch::xEstimateInterResidualQT( TComYuv    *pcResi,
                                                         tuCompRect.width, tuCompRect.height, compID);
 
 #if NH_3D_VSO // M NEW01
-               if ( m_pcRdCost->getUseRenModel() )
+               if ( m_pcRdCost->getUseLambdaScaleVSO() )
                {
                  currCompCost = m_pcRdCost->calcRdCostVSO(currCompBits, currCompDist);
                }
@@ -6954,7 +6979,7 @@ Void TEncSearch::xEstimateInterResidualQT( TComYuv    *pcResi,
     uiSingleBits = m_pcEntropyCoder->getNumberOfWrittenBits();
 
 #if NH_3D_VSO
-    if ( m_pcRdCost->getUseRenModel() )
+    if ( m_pcRdCost->getUseLambdaScaleVSO() )
     {
       dSingleCost = m_pcRdCost->calcRdCostVSO( uiSingleBits, uiSingleDist );
     }
@@ -7897,7 +7922,11 @@ Void TEncSearch::xSearchDmm1Wedge( TComDataCU* pcCU, UInt uiAbsPtIdx, Pel* piRef
   WedgeNodeList* pacWedgeNodeList = getWedgeNodeListScaled( uiWidth );
 
   // coarse wedge search
-  Dist uiBestDist   = RDO_DIST_MAX;
+#if NH_3D_VSO
+  Dist       uiBestDist   = RDO_DIST_MAX;
+#else
+  Distortion uiBestDist   = RDO_DIST_MAX;
+#endif
   UInt uiBestNodeId = 0;
   for( UInt uiNodeId = 0; uiNodeId < pacWedgeNodeList->size(); uiNodeId++ )
   {
@@ -7907,8 +7936,11 @@ Void TEncSearch::xSearchDmm1Wedge( TComDataCU* pcCU, UInt uiAbsPtIdx, Pel* piRef
     xCalcBiSegDCs  ( piRef,  uiRefStride,  pbPattern, uiStride, refDC1, refDC2, (1<<(bitDepthY-1)) );
     assignBiSegDCs( piPred, uiPredStride, pbPattern, uiStride, refDC1, refDC2 );
 
+#if !NH_3D_VSO
+    Distortion uiActDist = RDO_DIST_MAX;
+#else
     Dist uiActDist = RDO_DIST_MAX;
-#if NH_3D_VSO
+
     if( m_pcRdCost->getUseVSO() )
     {
       if( m_pcRdCost->getUseEstimatedVSD() )
@@ -7934,7 +7966,11 @@ Void TEncSearch::xSearchDmm1Wedge( TComDataCU* pcCU, UInt uiAbsPtIdx, Pel* piRef
   }
 
   // refinement
+#if NH_3D_VSO
   Dist uiBestDistRef = uiBestDist;
+#else
+  Distortion uiBestDistRef = uiBestDist;
+#endif
   UInt uiBestTabIdxRef  = pacWedgeNodeList->at(uiBestNodeId).getPatternIdx();
   for( UInt uiRefId = 0; uiRefId < DMM_NUM_WEDGE_REFINES; uiRefId++ )
   {
@@ -7945,8 +7981,11 @@ Void TEncSearch::xSearchDmm1Wedge( TComDataCU* pcCU, UInt uiAbsPtIdx, Pel* piRef
       UInt uiStride   = uiWidth;
       xCalcBiSegDCs  ( piRef,  uiRefStride,  pbPattern, uiStride, refDC1, refDC2, (1<<(bitDepthY-1)) );
       assignBiSegDCs( piPred, uiPredStride, pbPattern, uiStride, refDC1, refDC2 );
+
+#if !NH_3D_VSO
+      Distortion uiActDist = RDO_DIST_MAX;
+#else
       Dist uiActDist = RDO_DIST_MAX;
-#if NH_3D_VSO
       if( m_pcRdCost->getUseVSO() )
       {
         if( m_pcRdCost->getUseEstimatedVSD() )

@@ -79,7 +79,7 @@ protected:
   IntAry1d               m_viewId;                            ///< view id
   IntAry1d               m_viewOrderIndex;                    ///< view order index  
   IntAry1d               m_auxId;                             ///< auxiliary id
-#if NH_3D_VSO
+#if NH_3D_VSO || NH_3D
   IntAry1d               m_depthFlag;                         ///< depth flag
 #endif
   IntAry1d               m_targetEncLayerIdList;              ///< layer Ids in Nuh to be encoded
@@ -531,10 +531,12 @@ protected:
   Bool      m_depth420OutputFlag;                             ///< Output depth layers in 4:2:0 format
 #endif
     // Camera parameters
-#if NH_3D_VSO
+#if NH_3D || NH_3D_VSO
   TChar*    m_pchCameraParameterFile;                         ///< camera parameter file
   TAppComCamPara m_cCameraData;
   Int       m_iCodedCamParPrecision;                          ///< precision for coding of camera parameters
+#endif
+#if NH_3D_VSO
   TChar*    m_pchVSOConfig;
   Bool      m_bUseVSO;                                        ///< flag for using View Synthesis Optimization
   Bool      m_bVSOLSTable;                                    ///< Depth QP dependent Lagrange parameter optimization (m23714)

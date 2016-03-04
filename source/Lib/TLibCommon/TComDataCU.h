@@ -48,6 +48,9 @@
 #include "TComSlice.h"
 #include "TComRdCost.h"
 #include "TComPattern.h"
+#if NH_3D
+#include "TComYuv.h"
+#endif
 
 //! \ingroup TLibCommon
 //! \{

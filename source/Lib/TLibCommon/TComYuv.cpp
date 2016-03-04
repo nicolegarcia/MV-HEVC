@@ -486,6 +486,7 @@ Void TComYuv::addClipPartLuma( Int bitDepth, TComYuv* pcYuvSrc0, TComYuv* pcYuvS
     pDst  += iDstStride;
   }
 }
+#endif
 
 #if NH_3D_ARP
 Void TComYuv::addARP( TComYuv* pcYuvSrc0, TComYuv* pcYuvSrc1, UInt uiAbsPartIdx, UInt uiWidth, UInt uiHeight, Bool bClip, const BitDepths &clipBitDepths )
@@ -674,7 +675,6 @@ Void TComYuv::multiplyARPChroma( UInt uiAbsPartIdx , UInt uiWidth , UInt uiHeigh
     pDstV  += iDstStride;
   }
 }
-#endif
 #endif
 
 //! \}

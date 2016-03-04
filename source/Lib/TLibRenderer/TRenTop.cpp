@@ -39,7 +39,7 @@
 #include <iostream>
 #include <math.h>
 #include "../TLibCommon/CommonDef.h"
-#if NH_3D_VSO
+#if NH_3D_VSO  || NH_3D
 
 
 Void TRenTop::xGetDataPointers( PelImage*& rpcInputImage, PelImage*& rpcOutputImage, PelImage*& rpcInputDepth, PelImage*& rpcOutputDepth, PelImage*& rpcFilled, Bool bRenderDepth )

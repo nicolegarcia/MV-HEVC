@@ -43,7 +43,7 @@
 #include "TAppRendererCfg.h"
 #include "../../Lib/TAppCommon/program_options_lite.h"
 
-#if NH_3D_VSO
+#if NH_3D_VSO || NH_3D
 
 using namespace std;
 namespace po = df::program_options_lite;
@@ -206,27 +206,31 @@ Bool TAppRendererCfg::parseCfg( Int argc, TChar* argv[] )
   }
   else
   {
-  if ( m_bUseSetupString )
-  {
-    std::vector<Int>  iaTempViews;
-    std::vector<Int>* piaTempViews;
-    m_cCameraData     .convertNumberString( m_pchBaseViewCameraNumbers, iaTempViews, VIEW_NUM_PREC );
-    m_cRenModStrParser.setString( (Int) iaTempViews.size(), m_pchViewConfig );
-    piaTempViews               = m_cRenModStrParser.getSynthViews();
-    m_iNumberOfOutputViews     = (Int) m_cRenModStrParser.getNumOfModels();
-    m_iNumberOfInputViews      = (Int) m_cRenModStrParser.getNumOfBaseViews();
-    m_bContOutputFileNumbering = true;
+#if NH_3D_VSO
+    if ( m_bUseSetupString )
+    {
+      std::vector<Int>  iaTempViews;
+      std::vector<Int>* piaTempViews;
+      m_cCameraData     .convertNumberString( m_pchBaseViewCameraNumbers, iaTempViews, VIEW_NUM_PREC );
+      m_cRenModStrParser.setString( (Int) iaTempViews.size(), m_pchViewConfig );
+      piaTempViews               = m_cRenModStrParser.getSynthViews();
+      m_iNumberOfOutputViews     = (Int) m_cRenModStrParser.getNumOfModels();
+      m_iNumberOfInputViews      = (Int) m_cRenModStrParser.getNumOfBaseViews();
+      m_bContOutputFileNumbering = true;
 
-  m_cCameraData.init( MAX_INPUT_VIEW_NUM, uiInputBitDepth, uiCamParPrecision, (UInt)m_iFrameSkip, (UInt)m_iFramesToBeRendered,
-      m_pchCameraParameterFile, m_pchBaseViewCameraNumbers, NULL, piaTempViews, m_iLog2SamplingFactor+m_iShiftPrecision );
-  }
-  else
-  {
-  m_cCameraData.init( MAX_INPUT_VIEW_NUM, uiInputBitDepth, uiCamParPrecision, (UInt)m_iFrameSkip, (UInt)m_iFramesToBeRendered,
-      m_pchCameraParameterFile, m_pchBaseViewCameraNumbers, m_pchSynthViewCameraNumbers, NULL, m_iLog2SamplingFactor+m_iShiftPrecision );
-  m_iNumberOfOutputViews = (Int) m_cCameraData.getSynthViewNumbers().size();
-  m_iNumberOfInputViews  = (Int) m_cCameraData.getBaseViewNumbers() .size();
-  }
+      m_cCameraData.init( MAX_INPUT_VIEW_NUM, uiInputBitDepth, uiCamParPrecision, (UInt)m_iFrameSkip, (UInt)m_iFramesToBeRendered,
+        m_pchCameraParameterFile, m_pchBaseViewCameraNumbers, NULL, piaTempViews, m_iLog2SamplingFactor+m_iShiftPrecision );
+    }
+    else
+    {
+      m_cCameraData.init( MAX_INPUT_VIEW_NUM, uiInputBitDepth, uiCamParPrecision, (UInt)m_iFrameSkip, (UInt)m_iFramesToBeRendered,
+        m_pchCameraParameterFile, m_pchBaseViewCameraNumbers, m_pchSynthViewCameraNumbers, NULL, m_iLog2SamplingFactor+m_iShiftPrecision );
+      m_iNumberOfOutputViews = (Int) m_cCameraData.getSynthViewNumbers().size();
+      m_iNumberOfInputViews  = (Int) m_cCameraData.getBaseViewNumbers() .size();
+    }
+#else
+    AOF( false ); // Compile with VSO enabled to use this option.
+#endif
   }
 
   if (m_pchSynthOutputFileBaseName != NULL)
