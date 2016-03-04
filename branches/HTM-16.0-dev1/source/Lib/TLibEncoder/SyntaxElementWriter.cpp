@@ -127,7 +127,7 @@ Void  SyntaxElementWriter::xWriteFlagTr(UInt value, const TChar *pSymbolName)
 }
 
 #if NH_MV_ENC_DEC_TRAC
-Void  SyntaxElementWriter::xWriteStringTr( UChar* value, UInt length, const Char *pSymbolName)
+Void  SyntaxElementWriter::xWriteStringTr( UChar* value, UInt length, const TChar *pSymbolName)
 {
   xWriteString(value, length);
   if( g_HLSTraceEnable )

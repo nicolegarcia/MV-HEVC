@@ -441,7 +441,7 @@ static const std::string NALU_TYPE_STR[] = {
   };
 #endif
 
-#if NH_3D_VSO
+#if NH_3D_VSO || NH_3D
 //PICYUV
 #define PICYUV_PAD         16
 
@@ -455,16 +455,13 @@ static const std::string NALU_TYPE_STR[] = {
 #define REN_USED_PEL       ( (1 << REN_BIT_DEPTH) - 1 )
 #define REN_UNUSED_PEL     0
 #define REN_IS_HOLE        0
-#if NH_3D_VSO
 #define ENC_INTERNAL_BIT_DEPTH  REN_BIT_DEPTH // consider making this a variable
-#endif
-
-
+#endif // end of NH_3D_VSO
+#if NH_3D
 // CAMERA PARAMETERS
 #define LOG2_DISP_PREC_LUT           2           ///< log2 of disparity precision used in integer disparity LUTs
 #define STD_CAM_PARAMETERS_PRECISION 5        ///< quarter luma sample accuarcy for derived disparities (as default)
-
-#endif // end of NH_3D
+#endif
 //! \}
 
 #endif // end of #ifndef  __COMMONDEF__

@@ -68,13 +68,13 @@ Void  xTraceSliceHeader ( )
 {
   fprintf( g_hTrace, "=========== Slice ===========\n");
 }
+#endif
 
 Void  xTraceAccessUnitDelimiter ()
 {
   fprintf( g_hTrace, "=========== Access Unit Delimiter ===========\n");
 }
 
-#endif
 #endif
 
 Void AUDWriter::codeAUD(TComBitIf& bs, const Int pictureType)

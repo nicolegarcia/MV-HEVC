@@ -64,6 +64,11 @@
 /////////////////////////////////////////////////////////////////////////////////////////
 #if NH_MV
 // Recent bug fixes
+#define RM_INIT_FIX                      1
+#define RM_FIX_SETUP                     1
+
+
+#define NH_3D_FIX_INTRA_SDC_VSO_OFF              1
 #define NH_3D_FIX_TICKET_114                     1  //Mismatch between text and software on DPB size syntax
 #define NH_3D_FIX_LEAK                           1
 // Things that needs to be fixed also in the Specification ...
@@ -348,9 +353,15 @@
 #define RExt__DECODER_DEBUG_BIT_STATISTICS                0 ///< 0 (default) = decoder reports as normal, 1 = decoder produces bit usage statistics (will impact decoder run time by up to ~10%)
 #endif
 // This can be enabled by the makefile
-#if !NH_MV
 #ifndef ENC_DEC_TRACE
 #define ENC_DEC_TRACE                                     0
+#endif
+
+#if NH_MV
+#if ENC_DEC_TRACE
+#define GT_DEBUG   1
+#else
+#define GT_DEBUG   0
 #endif
 #endif
 #define DEC_NUH_TRACE                                     0 ///< When trace enabled, enable tracing of NAL unit headers at the decoder (currently not possible at the encoder)
@@ -509,6 +520,8 @@ typedef       UInt64           Dist;
 #define       RDO_DIST_MIN     0
 #define       RDO_DIST_MAX     MAX_UINT
 #endif
+#else
+#define       RDO_DIST_MAX     MAX_UINT
 #endif
 // ====================================================================================================================
 // Enumeration
@@ -999,6 +1012,16 @@ enum BlenMod
   BLEND_RIGHT = 2,
   BLEND_GEN   =  3
 };
+
+  enum SetMod
+  {
+    GET_FULL   = 0,
+    SET_FULL   = 1,
+    GET_SIMP   = 2,
+    SET_SIMP   = 3    
+  };
+
+  
 enum
 {
   VIEWPOS_INVALID = -1,

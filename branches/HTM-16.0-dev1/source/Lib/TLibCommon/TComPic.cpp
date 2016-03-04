@@ -59,7 +59,7 @@ TComPic::TComPic()
 , m_layerId                               (0)
 , m_viewId                                (0)
 , m_bPicOutputFlag                        (false)
-#if NH_3D_VSO
+#if NH_3D_VSO || NH_3D
 , m_viewIndex                             (0)
 , m_isDepth                               (false)
 , m_aaiCodedScale                         (0)
@@ -988,7 +988,7 @@ Void TComPicLists::print()
   }
 }
 
-#if NH_3D_VSO
+#if NH_3D_VSO || NH_3D
 TComPicYuv* TComPicLists::getPicYuv( Int viewIndex, Bool depthFlag, Int auxId, Int poc, Bool recon )
 {  
   Int layerIdInNuh = m_vps->getLayerIdInNuh( viewIndex, depthFlag, auxId ); 

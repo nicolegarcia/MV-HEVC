@@ -5100,7 +5100,7 @@ Void TComDataCU::getDisMvpCandNBDV( DisInfo* pDInfo
   const TComDataCU* pcTmpCU     = NULL;
 
   //// ******* Get disparity from left block ******* /////
-  pcTmpCU = getPULeft(uiIdx, uiPartIdxLB);
+    pcTmpCU = getPULeft(uiIdx, uiPartIdxLB);
   bCheckMcpDv = true; 
   if ( xCheckSpatialNBDV( pcTmpCU, uiIdx, pDInfo, bCheckMcpDv, &cIDVInfo, DVFROM_LEFT
 #if NH_3D_NBDV_REF

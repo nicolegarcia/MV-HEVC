@@ -46,7 +46,7 @@
 #include <string>
 #include <vector>
 
-#if NH_3D_VSO
+#if NH_3D_VSO  || NH_3D
 
 // ====================================================================================================================
 // Class definition
@@ -90,7 +90,9 @@ protected:
 
   // derived
   TAppComCamPara      m_cCameraData;                    ///< class to store camera parameters
+#if NH_3D_VSO
   TRenModSetupStrParser m_cRenModStrParser;             ///< class to manage View to be rendered
+#endif
   Bool                m_bUseSetupString;                ///< true if setup string is used
 
   Int                 m_iNumberOfInputViews;            ///< number of input Views

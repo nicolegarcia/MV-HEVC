@@ -1091,7 +1091,7 @@ Void TAppDecTop::xDecodeFirstSliceOfPicture( InputNALUnit nalu, Bool sliceIsFirs
     m_initilizedFromVPS = true;
     m_newVpsActivatedbyCurAu  = true; //TBD
     m_newVpsActivatedbyCurPic = true;
-#if NH_3D_VSO
+#if NH_3D_VSO || NH_3D
     m_dpb.setVPS( m_vps ); 
 #endif
   }

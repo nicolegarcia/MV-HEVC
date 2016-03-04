@@ -460,7 +460,7 @@ Void TEncSlice::initEncSlice( TComPic* pcPic, const Int pocLast, const Int pocCu
   setUpLambda(rpcSlice, dLambda, iQP);
 
 #if NH_3D_VSO
-  m_pcRdCost->setUseLambdaScaleVSO  ( (m_pcCfg->getUseVSO() ||  m_pcCfg->getForceLambdaScaleVSO()) && ( m_pcCfg->getIsDepth()  | m_pcCfg->getIsAuxDepth() ) );
+  m_pcRdCost->setUseLambdaScaleVSO  ( (m_pcCfg->getUseVSO() ||  m_pcCfg->getForceLambdaScaleVSO()) && ( m_pcCfg->getIsDepth() || m_pcCfg->getIsAuxDepth() ) );
   m_pcRdCost->setLambdaVSO          ( dLambda * m_pcCfg->getLambdaScaleVSO() );
 
   // Should be moved to TEncTop

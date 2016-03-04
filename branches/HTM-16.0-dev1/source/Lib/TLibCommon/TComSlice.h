@@ -1383,7 +1383,7 @@ public:
 
   /// VPS EXTENSION 2 SYNTAX ELEMENTS
   Int     getDepthId                   ( Int layerIdInNuh)             const    { return getScalabilityId( getLayerIdInVps(layerIdInNuh), DEPTH_ID ); }
-#if NH_3D_VSO                                                             
+#if NH_3D_VSO || NH_3D
   Bool    getVpsDepthFlag              ( Int layerIdInNuh)             const    { return (getDepthId( layerIdInNuh ) > 0);  }
   Int     getLayerIdInNuh              ( Int viewIndex, Bool depthFlag, Int auxId ) const;   
 #endif
@@ -2700,7 +2700,7 @@ private:
   Int        m_layerId; 
   Int        m_viewId;
   Int        m_viewIndex; 
-#if NH_3D_VSO
+#if NH_3D_VSO || NH_3D
   Bool       m_isDepth;
 #endif
 
@@ -3167,7 +3167,7 @@ public:
   IntAry1d                    getPocsInCurrRPSs()                                    { return m_pocsInCurrRPSs;                                      } 
 #endif                        
 #endif
-#if NH_3D_VSO
+#if NH_3D_VSO || NH_3D
   Void                        setIsDepth            ( Bool isDepth )                 { m_isDepth = isDepth;                                          }
   Bool                        getIsDepth            () const                         { return m_isDepth;                                             }
 #endif
