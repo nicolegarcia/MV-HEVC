@@ -5252,6 +5252,15 @@ Void TEncSearch::xMotionEstimation( TComDataCU* pcCU, TComYuv* pcYuvOrg, Int iPa
   else
   {
     rcMv = *pcMvPred;
+#if NH_MV_FIX_VERT_MV_REST
+    if ( m_vertRestriction )
+    {
+      if (rcMv.getVer() > cMvSrchRngRB.getVer()<<2)
+      {
+        rcMv.setVer(cMvSrchRngRB.getVer()<<2);
+      }
+    }
+#endif
     const TComMv *pIntegerMv2Nx2NPred=0;
     if (pcCU->getPartitionSize(0) != SIZE_2Nx2N || pcCU->getDepth(0) != 0)
     {

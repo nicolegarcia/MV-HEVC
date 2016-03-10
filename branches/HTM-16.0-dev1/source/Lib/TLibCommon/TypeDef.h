@@ -66,7 +66,7 @@
 // Recent bug fixes
 #define RM_INIT_FIX                      1
 #define RM_FIX_SETUP                     1
-
+#define NH_MV_FIX_VERT_MV_REST                         1
 
 #define NH_3D_FIX_INTRA_SDC_VSO_OFF              1
 #define NH_3D_FIX_TICKET_114                     1  //Mismatch between text and software on DPB size syntax
