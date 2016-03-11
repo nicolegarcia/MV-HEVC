@@ -95,7 +95,7 @@ protected:
   Void  xWriteSvlcTr          ( Int  value,               const TChar *pSymbolName);
   Void  xWriteFlagTr          ( UInt value,               const TChar *pSymbolName);
 #if NH_MV
-  Void  xWriteStringTr        ( UChar* value, UInt length, const Char *pSymbolName);
+  Void  xWriteStringTr        ( UChar* value, UInt length, const TChar *pSymbolName);
 #endif
 #endif
   Void xWriteRbspTrailingBits();

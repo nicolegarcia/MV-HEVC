@@ -69,15 +69,26 @@ public:
 
   virtual ~TRenSingleModel() { }  
 #if H_3D_VSO_EARLY_SKIP
-  virtual Void   create    ( Int iMode, Int iWidth, Int iHeight, Int iShiftPrec, Int*** aaaiSubPelShiftTable, Int iHoleMargin, Bool bUseOrgRef, Int iBlendMode, Bool bEarlySkip ) = 0;
+  virtual Void   create    ( Int iMode, Int iWidth, Int iHeight, Int iShiftPrec, Int*** aaaiSubPelShiftTable, Int iHoleMargin, Bool bUseOrgRef, Int iBlendMode, Bool bLimOutput, Bool bEarlySkip ) = 0;
 #else
-  virtual Void   create    ( Int iMode, Int iWidth, Int iHeight, Int iShiftPrec, Int*** aaaiSubPelShiftTable, Int iHoleMargin, Bool bUseOrgRef, Int iBlendMode ) = 0;
+  virtual Void   create    ( Int iMode, Int iWidth, Int iHeight, Int iShiftPrec, Int*** aaaiSubPelShiftTable, Int iHoleMargin, Bool bUseOrgRef, Int iBlendMode, Bool bLimOutput ) = 0;
 #endif
 
-  // Set Frame dependent data
-  virtual Void   setLRView ( Int iViewPos, Pel** apiCurVideoPel, Int* aiCurVideoStride, Pel* piCurDepthPel, Int iCurDepthStride ) = 0;
-  virtual Void   setupPart ( UInt uiHorOffset,       Int iUsedHeight ) = 0;
-  virtual Void   setup     ( TComPicYuv* pcOrgVideo, Int** ppiShiftLutLeft, Int** ppiBaseShiftLutLeft, Int** ppiShiftLutRight,  Int** ppiBaseShiftLutRight,  Int iDistToLeft, Bool bKeepReference ) = 0;
+  // Setup 
+  virtual Void   setLRView         ( Int iViewPos, Pel** apiCurVideoPel, Int* aiCurVideoStride, Pel* piCurDepthPel, Int iCurDepthStride ) = 0;
+  virtual Void   setupPart         ( UInt uiHorOffset,       Int iUsedHeight ) = 0;
+#if RM_FIX_SETUP
+  virtual Void   setupLut          ( Int** ppiShiftLutLeft, Int** ppiBaseShiftLutLeft, Int** ppiShiftLutRight, Int** ppiBaseShiftLutRight, Int iDistToLeft ) = 0;
+  virtual Void   setupRefView      ( TComPicYuv* pcOrgVideo ) = 0;
+
+  virtual Void   renderAll                   ()                     = 0;
+  virtual Void   setStructSynthViewAsRefView ()                     = 0;
+  virtual Void   resetStructError            ()                     = 0;
+  virtual Void   setLimOutStruct             ( Int iSourceViewPos ) = 0; 
+#else
+  virtual Void   setupLutAndRef    ( TComPicYuv* pcOrgVideo, Int** ppiShiftLutLeft, Int** ppiBaseShiftLutLeft, Int** ppiShiftLutRight, Int** ppiBaseShiftLutRight, Int iDistToLeft, Bool bRenderRef ) = 0;
+  virtual Void   setupInitialState ( Int curViewPosInModel ) = 0;
+#endif
 
   // Set Data
 #if H_3D_VSO_EARLY_SKIP
@@ -113,9 +124,24 @@ class TRenSingleModelC : public TRenSingleModel
 #endif
     // depth
     Pel iD        ; // depth
+   Int aiOccludedPos; // Occluded
 
-    // state
-    Bool bOccluded; // Occluded
+  };
+
+  struct RenModelLimOutPels
+  {
+    Pel iDOther;
+    Int iFilledOther; 
+    // video
+    Pel iYOther; 
+    Pel iYRef  ; 
+#if H_3D_VSO_COLOR_PLANES
+    Pel iUOther; 
+    Pel iURef  ; 
+    Pel iVOther;
+    Pel iVRef  ; 
+#endif  
+    Int iError ;
   };
 
   struct RenModelOutPels
@@ -160,29 +186,41 @@ public:
 
   // Create Model
 #if H_3D_VSO_EARLY_SKIP
-  Void   create    ( Int iMode, Int iWidth, Int iHeight, Int iShiftPrec, Int*** aaaiSubPelShiftTable, Int iHoleMargin, Bool bUseOrgRef, Int iBlendMode, Bool bEarlySkip  );
+  Void   create    ( Int iMode, Int iWidth, Int iHeight, Int iShiftPrec, Int*** aaaiSubPelShiftTable, Int iHoleMargin, Bool bUseOrgRef, Int iBlendMode, Bool bLimOutput, Bool bEarlySkip  );
 #else
-  Void   create    ( Int iMode, Int iWidth, Int iHeight, Int iShiftPrec, Int*** aaaiSubPelShiftTable, Int iHoleMargin, Bool bUseOrgRef, Int iBlendMode );
+  Void   create    ( Int iMode, Int iWidth, Int iHeight, Int iShiftPrec, Int*** aaaiSubPelShiftTable, Int iHoleMargin, Bool bUseOrgRef, Int iBlendMode, Bool bLimOutput );
 #endif
 
-  // Set Frame dependent data
-  Void   setLRView ( Int iViewPos, Pel** apiCurVideoPel, Int* aiCurVideoStride, Pel* piCurDepthPel, Int iCurDepthStride );
-  Void   setupPart ( UInt uiHorOffset,       Int uiUsedHeight );
-  Void   setup     ( TComPicYuv* pcOrgVideo, Int** ppiShiftLutLeft, Int** ppiBaseShiftLutLeft, Int** ppiShiftLutRight,  Int** ppiBaseShiftLutRight,  Int iDistToLeft, Bool bKeepReference );
+  // Setup 
+  Void   setLRView         ( Int iViewPos, Pel** apiCurVideoPel, Int* aiCurVideoStride, Pel* piCurDepthPel, Int iCurDepthStride );  
+  Void   setupPart         ( UInt uiHorOffset,       Int uiUsedHeight ); 
+#if RM_FIX_SETUP
+  Void   setupLut          (  Int** ppiShiftLutLeft, Int** ppiBaseShiftLutLeft, Int** ppiShiftLutRight, Int** ppiBaseShiftLutRight, Int iDistToLeft);
+  Void   setupRefView      ( TComPicYuv* pcOrgVideo );
+  
+  __inline   Void   renderAll( );
+  Void              setStructSynthViewAsRefView ();
+  Void              resetStructError            ();
+  Void              setLimOutStruct             ( Int iSourceViewPos ); 
+#else
+  Void   setupLutAndRef    ( TComPicYuv* pcOrgVideo, Int** ppiShiftLutLeft, Int** ppiBaseShiftLutLeft, Int** ppiShiftLutRight, Int** ppiBaseShiftLutRight, Int iDistToLeft, Bool bRenderRef );
+  Void   setupInitialState ( Int curViewPosInModel );
+#endif
+
 
 #if H_3D_VSO_EARLY_SKIP
   Void   setDepth  ( Int iViewPos,                 Int iStartPosX, Int iStartPosY, Int iWidth, Int iHeight, Int iStride, const Pel* piNewData, const Pel* piOrgData, Int iOrgStride );
-#else                                                                                                                    
+#else
   Void   setDepth  ( Int iViewPos,                 Int iStartPosX, Int iStartPosY, Int iWidth, Int iHeight, Int iStride, const Pel* piNewData );
-#endif                                                                                                                   
+#endif
   Void   setVideo  ( Int iViewPos,     Int iPlane, Int iStartPosX, Int iStartPosY, Int iWidth, Int iHeight, Int iStride, const Pel* piNewData );
-                                                                                                                         
-  // Get Distortion                                                                                                      
-#if H_3D_VSO_EARLY_SKIP                                                                                                  
+
+  // Get Distortion
+#if H_3D_VSO_EARLY_SKIP
   RMDist getDistDepth  ( Int iViewPos,             Int iStartPosX, Int iStartPosY, Int iWidth, Int iHeight, Int iStride, const Pel* piNewData, const Pel * piOrgData , Int iOrgStride);
-#else                                                                                                                    
+#else
   RMDist getDistDepth  ( Int iViewPos,             Int iStartPosX, Int iStartPosY, Int iWidth, Int iHeight, Int iStride, const Pel* piNewData );
-#endif                                                                                                                   
+#endif
   RMDist getDistVideo  ( Int iViewPos, Int iPlane, Int iStartPosX, Int iStartPosY, Int iWidth, Int iHeight, Int iStride, const Pel* piNewData );
 
   Void   getSynthVideo  ( Int iViewPos, TComPicYuv* pcPicYuv );  
@@ -190,66 +228,69 @@ public:
   Void   getRefVideo    ( Int iViewPos, TComPicYuv* pcPicYuv );
 
 private:
+
+#if !RM_FIX_SETUP
+   __inline Void  xRenderAll( );
+#endif
+
+
+#if H_3D_VSO_EARLY_SKIP
+    template < Bool bL, SetMod iSM > RMDist xSetOrGet( Int iStartPosX, Int iStartPosY, Int iWidth, Int iHeight, Int iStride, const Pel* piNewData, Pel* piOrgData, Int iOrgStride );     
+#else
+    template < Bool bL, SetMod iSM > RMDist xSetOrGet( Int iStartPosX, Int iStartPosY, Int iWidth, Int iHeight, Int iStride, const Pel* piNewData );
+#endif
+
   // Set and inc Current Row
-  __inline Void   xSetViewRow(  Int iPosY );
-  __inline Void   xIncViewRow();
+  template< SetMod bSM  > __inline Void   xSetViewRow(  Int iPosY );
+  template< SetMod bSM  > __inline Void   xIncViewRow();
 
   /////  Rendering /////
-  // Left to Right
+  template< typename T, Bool bL > __inline T    xPlus   ( T arg1, T arg2 ) { return bL ? (arg1 + arg2) : (arg1 - arg2); };
+  template< typename T, Bool bL > __inline T    xMin    ( T arg1, T arg2 ) { return bL ? std::min(arg1, arg2) : std::max(arg1, arg2) ;};
+  template< typename T, Bool bL > __inline T    xMax    ( T arg1, T arg2 ) { return bL ? std::max(arg1, arg2) : std::min(arg1, arg2) ;};
+  template< typename T, Bool bL > __inline Void xInc    ( T& arg1        ) { bL ? arg1++ : arg1-- ;};
+  template< typename T, Bool bL > __inline Void xDec    ( T& arg1        ) { bL ? arg1-- : arg1++ ;};
+  template< typename T, Bool bL > __inline Bool xLess   ( T arg1, T arg2 ) { return bL ? arg1 <  arg2 : arg1 >  arg2; };  
+  template< typename T, Bool bL > __inline Bool xGeQ    ( T arg1, T arg2 ) { return bL ? arg1 >= arg2 : arg1 <= arg2; };
+  template<             Bool bL > __inline Int  xZero   (                ) { return bL ? 0 : m_iWidth - 1; };
+  template<             Bool bL > __inline Int  xWidthMinus1(            ) { return bL ? m_iWidth - 1 : 0; };
 #if H_3D_VSO_EARLY_SKIP
-                      __inline Bool   xDetectEarlySkipL   ( Int iStartPosX, Int iStartPosY, Int iWidth, Int iHeight, Int iStride, const Pel* piNewData, const Pel* piOrgData, Int iOrgStride );
-                      __inline Bool   xDetectEarlySkipR   ( Int iStartPosX, Int iStartPosY, Int iWidth, Int iHeight, Int iStride, const Pel* piNewData, const Pel* piOrgData, Int iOrgStride );
-  template<Bool bSet> __inline RMDist xRenderL            ( Int iStartPosX, Int iStartPosY, Int iWidth, Int iHeight, Int iStride, const Pel* piNewData, Bool bFast );
-  template<Bool bSet> __inline RMDist xRenderR            ( Int iStartPosX, Int iStartPosY, Int iWidth, Int iHeight, Int iStride, const Pel* piNewData, Bool bFast );
+  template<             Bool bL > __inline Bool   xDetectEarlySkip    ( Int iStartPosX, Int iStartPosY, Int iWidth, Int iHeight, Int iStride, const Pel* piNewData,const Pel* piOrgData, Int iOrgStride );
+  template< Bool bL, SetMod bSM > __inline RMDist xRender             ( Int iStartPosX, Int iStartPosY, Int iWidth, Int iHeight, Int iStride, const Pel* piNewData, Bool bFast );
+  template< SetMod bSM >            __inline RMDist xGetSSE             ( Int iStartPosX, Int iStartPosY, Int iWidth, Int iHeight, Int iStride, const Pel* piNewData, Bool bFast );
+#else       
+  template< Bool bL, SetMod bSM  > __inline RMDist xRender             ( Int iStartPosX, Int iStartPosY, Int iWidth, Int iHeight, Int iStride, const Pel* piNewData );
+  template<          SetMod bSM  > __inline RMDist xGetSSE             ( Int iStartPosX, Int iStartPosY, Int iWidth, Int iHeight, Int iStride, const Pel* piNewData );
+#endif                          
+  template< Bool bL              > __inline Void   xInitRenderPart    ( Int iEndChangePos, Int iLastSPos  );
+  template< Bool bL, SetMod bSM  > __inline Void   xRenderRange       ( Int iCurSPos, Int iLastSPos, Int iCurPos, RMDist& riError );
+  template< Bool bL, SetMod bSM  > __inline Void   xRenderShiftedRange( Int iCurSPos, Int iLastSPos, Int iCurPos, RMDist& riError );
+  template< Bool bL, SetMod bSM  > __inline Void   xFillHole          ( Int iCurSPos, Int iLastSPos, Int iCurPos, RMDist& riError );
+  template< Bool bL, SetMod bSM  > __inline Void   xExtrapolateMargin ( Int iCurSPos,                Int iCurPos, RMDist& riError );
+  template< Bool bL              > __inline Int    xRangeLeft         ( Int iPos );
+  template< Bool bL              > __inline Int    xRangeRight        ( Int iPos );
+  template< Bool bL              > __inline Int    xRound             ( Int iPos );
+
+#if H_3D_VSO_COLOR_PLANES  
+  template< Bool bL, SetMod bSM > __inline Void   xGetBlendedValue    ( Pel& riY, Pel iYL,  Pel iYR, Pel& riU, Pel iUL,  Pel iUR,  Pel& riV, Pel iVL,  Pel iVR, Int iFilledL,  Int iFilledR, Pel iDepthL,  Pel iDepthR );
+  template< Bool bL, SetMod bSM > __inline Void   xGetBlendedValueBM1 ( Pel& riY, Pel iYL,  Pel iYR, Pel& riU, Pel iUL,  Pel iUR,  Pel& riV, Pel iVL,  Pel iVR, Int iFilledL,  Int iFilledR, Pel iDepthL,  Pel iDepthR );
+  template< Bool bL, SetMod bSM > __inline Void   xGetBlendedValueBM2 ( Pel& riY, Pel iYL,  Pel iYR, Pel& riU, Pel iUL,  Pel iUR,  Pel& riV, Pel iVL,  Pel iVR, Int iFilledL,  Int iFilledR, Pel iDepthL,  Pel iDepthR );
 #else
-  template<Bool bSet> __inline RMDist xRenderR            ( Int iStartPosX, Int iStartPosY, Int iWidth, Int iHeight, Int iStride, const Pel* piNewData );
-  template<Bool bSet> __inline RMDist xRenderL            ( Int iStartPosX, Int iStartPosY, Int iWidth, Int iHeight, Int iStride, const Pel* piNewData );
-#endif
-                      __inline Void   xInitRenderPartL    ( Int iEndChangePos, Int iLastSPos  );
-  template<Bool bSet> __inline Void   xRenderRangeL       ( Int iCurSPos, Int iLastSPos, Int iCurPos, RMDist& riError );
-  template<Bool bSet> __inline Void   xRenderShiftedRangeL( Int iCurSPos, Int iLastSPos, Int iCurPos, RMDist& riError );
-  template<Bool bSet> __inline Void   xFillHoleL          ( Int iCurSPos, Int iLastSPos, Int iCurPos, RMDist& riError );
-  template<Bool bSet> __inline Void   xExtrapolateMarginL ( Int iCurSPos,                Int iCurPos, RMDist& riError );
-                      __inline Int    xRangeLeftL         ( Int iPos );
-                      __inline Int    xRangeRightL        ( Int iPos );
-                      __inline Int    xRoundL             ( Int iPos );
-
-  // Right to Left
-                      __inline Void   xInitRenderPartR    ( Int iStartChangePos, Int iLastSPos );
-  template<Bool bSet> __inline Void   xRenderShiftedRangeR( Int iCurSPos, Int iLastSPos, Int iCurPos, RMDist& riError );
-  template<Bool bSet> __inline Void   xRenderRangeR       ( Int iCurSPos, Int iLastSPos, Int iCurPos, RMDist& riError );
-  template<Bool bSet> __inline Void   xFillHoleR          ( Int iCurSPos, Int iLastSPos, Int iCurPos, RMDist& riError );
-  template<Bool bSet> __inline Void   xExtrapolateMarginR ( Int iCurSPos,                Int iCurPos, RMDist& riError );
-                      __inline Int    xRangeLeftR         ( Int iPos );
-                      __inline Int    xRangeRightR        ( Int iPos );
-                      __inline Int    xRoundR             ( Int iPos );
-
-  // Blending
-  template<Bool bSet> __inline Void   xSetShiftedPelBlend ( Int iSourcePos, Int iTargetSPos, Pel iFilled, RMDist& riError );
-
-#if H_3D_VSO_COLOR_PLANES
-  __inline Void   xGetBlendedValue    ( Pel iYL, Pel iYR, Pel iUL, Pel iUR, Pel iVL, Pel iVR, Pel iDepthL, Pel iDepthR, Int iFilledL, Int iFilledR, Pel& riY, Pel& riU, Pel&riV );
-  __inline Void   xGetBlendedValueBM1 ( Pel iYL, Pel iYR, Pel iUL, Pel iUR, Pel iVL, Pel iVR, Pel iDepthL, Pel iDepthR, Int iFilledL, Int iFilledR, Pel& riY, Pel& riU, Pel&riV );
-  __inline Void   xGetBlendedValueBM2 ( Pel iYL, Pel iYR, Pel iUL, Pel iUR, Pel iVL, Pel iVR, Pel iDepthL, Pel iDepthR, Int iFilledL, Int iFilledR, Pel& riY, Pel& riU, Pel&riV );
-#else
-  __inline Void   xGetBlendedValue    ( Pel iYL, Pel iYR, Pel iDepthL, Pel iDepthR, Int iFilledL, Int iFilledR, Pel& riY );
-  __inline Void   xGetBlendedValueBM1 ( Pel iYL, Pel iYR, Pel iDepthL, Pel iDepthR, Int iFilledL, Int iFilledR, Pel& riY );
-  __inline Void   xGetBlendedValueBM2 ( Pel iYL, Pel iYR, Pel iDepthL, Pel iDepthR, Int iFilledL, Int iFilledR, Pel& riY );
+  template< Bool bL, SetMod bSM > __inline Void   xGetBlendedValue    ( Pel& riY, Pel iYL,  Pel iYR, Int iFilledL,  Int iFilledR, Pel iDepthL,  Pel iDepthR  );
+  template< Bool bL, SetMod bSM > __inline Void   xGetBlendedValueBM1 ( Pel& riY, Pel iYL,  Pel iYR, Int iFilledL,  Int iFilledR, Pel iDepthL,  Pel iDepthR  );
+  template< Bool bL, SetMod bSM > __inline Void   xGetBlendedValueBM2 ( Pel& riY, Pel iYL,  Pel iYR, Int iFilledL,  Int iFilledR, Pel iDepthL,  Pel iDepthR  );
 #endif
   __inline Pel    xBlend              ( Pel pVal1, Pel pVal2, Int iWeightVal2 );
 
   // General
-  template<Bool bSet> __inline Void xSetShiftedPelL       (Int iSourcePos,             Int iSubSourcePos, Int iTargetSPos,              Pel iFilled, RMDist& riError );
-  template<Bool bSet> __inline Void xSetShiftedPelBlendL  (RenModelInPels* pcInSample, Int iSubSourcePos, RenModelOutPels* pcOutSample, Pel iFilled, RMDist& riError );
-  template<Bool bSet> __inline Void xSetShiftedPelNoBlendL(RenModelInPels* pcInSample, Int iSubSourcePos, RenModelOutPels* pcOutSample, Pel iFilled, RMDist& riError );
+  template<Bool bL, SetMod bSM> __inline Void xSetShiftedPel       (Int iSourcePos, Int iSubSourcePos, Int iTargetSPos, Pel iFilled, RMDist& riError );
+  
+  template <Bool bL>           __inline Int  xShiftNewData        ( Int iPos, Int iPosInNewData );
+  template <Bool bL>           __inline Int  xShift               ( Int iPos );
+  template <Bool bL>           __inline Int  xShift               ( Int iPos, Int iPosInNewData );
 
-  template<Bool bSet> __inline Void xSetShiftedPelR       (Int iSourcePos,             Int iSubSourcePos, Int iTargetSPos,              Pel iFilled, RMDist& riError );
-  template<Bool bSet> __inline Void xSetShiftedPelBlendR  (RenModelInPels* pcInSample, Int iSubSourcePos, RenModelOutPels* pcOutSample, Pel iFilled, RMDist& riError );
-  template<Bool bSet> __inline Void xSetShiftedPelNoBlendR(RenModelInPels* pcInSample, Int iSubSourcePos, RenModelOutPels* pcOutSample, Pel iFilled, RMDist& riError );
+  __inline Int    xShiftDept         ( Int iPosXinSubPel, Int iDepth ); 
 
-  __inline Int    xShiftNewData      ( Int iPos, Int iPosInNewData );
-  __inline Int    xShift             ( Int iPos );
-  __inline Int    xShift             ( Int iPos, Int iPosInNewData );
   __inline Int    xGetDist           ( Int iDiffY, Int iDiffU, Int iDiffV );
   __inline Int    xGetDist           ( Int iDiffY );
 
@@ -263,12 +304,20 @@ private:
 #else  
   Void            xGetSampleStrTextPtrs ( Int iViewNum, Pel RenModelOutPels::*& rpiSrcY );
 #endif 
-  Void            xGetSampleStrDepthPtrs( Int iViewNum, Pel RenModelOutPels::*& rpiSrcD );
+  Void            xGetSampleStrDepthPtrs ( Int iViewNum, Pel RenModelOutPels::*& rpiSrcD      );
+  Void            xGetSampleStrFilledPtrs( Int iViewNum, Int RenModelOutPels::*& rpiSrcFilled );
+
        
   Void            xSetStructRefView            ();
+#if !RM_FIX_SETUP
   Void            xResetStructError            ();
+  Void            xSetLimOutStruct             (Int iSourceViewPos ); 
+#endif
+  
   Void            xInitSampleStructs           ();
+#if !RM_FIX_SETUP
   Void            xSetStructSynthViewAsRefView ();
+#endif
   Void            xCopy2PicYuv                ( Pel** ppiSrcVideoPel, Int* piStrides, TComPicYuv* rpcPicYuvTarget );
 
   template< typename S, typename T> 
@@ -339,7 +388,9 @@ private:
   TComPicYuv* m_pcPicYuvRef       ;    // Reference PIcYuv
 
   //// Output Samples
-  RenModelOutPels* m_pcOutputSamples;
+  RenModelOutPels*      m_pcOutputSamples;
+  RenModelLimOutPels*   m_pcLimOutputSamples; 
+
   Int                   m_iOutputSamplesStride;
 
   Pel*  m_aapiRefVideoPel      [3];    // Dim1: Plane  0-> Y, 1->U, 2->V
@@ -348,10 +399,10 @@ private:
   // Rendering State
   Bool  m_bInOcclusion;                // Currently rendering in occluded area
   Int   m_iLastOccludedSPos;           // Position of last topmost shifted position
-  Int   m_iLastOccludedSPosFP;         // Position of last topmost shifted position in FullPels
 
-  Int   m_iCurViewPos;                 // Current View Position 0: Left, 1: Right
-  Int   m_iOtherViewPos;               // Other View Position 0: Left, 1: Right
+  Int   m_curRangeStart; 
+  Int   m_lastRangeStart;  
+
   const Pel*  m_piNewDepthData;              // Pointer to new depth data
   Int   m_iStartChangePosX;            // Start Position of new data
   Int   m_iNewDataWidth;               // Width of new data
@@ -376,11 +427,13 @@ private:
 
   //// Current Pointers ////
 
-  RenModelInPels*  m_pcInputSamplesRow [2];
-  RenModelOutPels* m_pcOutputSamplesRow;
+  RenModelInPels*     m_pcInputSamplesRow [2];
+  RenModelOutPels*    m_pcOutputSamplesRow;
+  RenModelLimOutPels* m_pcLimOutputSamplesRow;
 
   //// MISC ////
-  const Int m_iDistShift;                  // Shift in Distortion computation
+  const Int m_iDistShift;            // Shift in Distortion computation
+  Bool      m_bLimOutput;            // Save distortion only
 
   //// Early Skip 
 #if H_3D_VSO_EARLY_SKIP
@@ -388,7 +441,7 @@ private:
 #endif
 };
 
-#endif // NH_3D
+#endif // H_3D
 #endif //__TRENSINGLEMODEL__
 
 

@@ -187,6 +187,8 @@ TAppEncCfg::~TAppEncCfg()
   {
     free (  m_pchVSOConfig );
   }
+#endif
+#if NH_3D_VSO || NH_3D  
   
   if ( m_pchCameraParameterFile != NULL )
   {
@@ -815,7 +817,7 @@ Bool TAppEncCfg::parseCfg( Int argc, TChar* argv[] )
   ("ViewOrderIndex",                 m_viewOrderIndex              , IntAry1d(1,0),                                 "View Order Index per layer")
   ("ViewId",                         m_viewId                      , IntAry1d(1,0),                                 "View Id per View Order Index")
   ("AuxId",                          m_auxId                       , IntAry1d(1,0),                                 "AuxId per layer")
-#if NH_3D_VSO
+#if NH_3D_VSO || NH_3D
   ("DepthFlag",                      m_depthFlag                   , IntAry1d(1,0),                                 "Depth Flag")
 #endif
   ("TargetEncLayerIdList",           m_targetEncLayerIdList        , IntAry1d(0,0),                                 "LayerIds in Nuh to be encoded")  
@@ -1284,10 +1286,11 @@ Bool TAppEncCfg::parseCfg( Int argc, TChar* argv[] )
 #if NH_3D
   ("Depth420OutputFlag",                              m_depth420OutputFlag,           true                     , "Output depth layers in 4:2:0 ") 
 #endif
-#if NH_3D_VSO  
+#if NH_3D_VSO  || NH_3D
   ("CameraParameterFile,cpf",                         m_pchCameraParameterFile,    (TChar *) 0                 , "Camera Parameter File Name")
   ("CodedCamParsPrecision",                           m_iCodedCamParPrecision,      STD_CAM_PARAMETERS_PRECISION, "precision for coding of camera parameters (in units of 2^(-x) luma samples)" )
-
+#endif
+#if NH_3D_VSO  
   /* View Synthesis Optimization */
   ("VSOConfig",                                       m_pchVSOConfig            , (TChar *) 0                   ,"VSO configuration")
   ("VSO",                                             m_bUseVSO                 , false                         ,"Use VSO" )    
@@ -1806,7 +1809,7 @@ Bool TAppEncCfg::parseCfg( Int argc, TChar* argv[] )
   m_iNumberOfViews = (Int) uniqueViewOrderIndices.size(); 
   xResizeVector( m_auxId );
 
-#if NH_3D_VSO
+#if NH_3D_VSO || NH_3D
   xResizeVector( m_depthFlag ); 
 #endif
   xResizeVector( m_fQP ); 
@@ -2069,8 +2072,9 @@ Bool TAppEncCfg::parseCfg( Int argc, TChar* argv[] )
       NULL,
       LOG2_DISP_PREC_LUT );
   }
-#if NH_3D
   else
+#endif
+#if NH_3D || NH_3D_VSO
   {
     m_cCameraData     .init     ( ((UInt) m_iNumberOfViews ), 
       m_internalBitDepth[ CHANNEL_TYPE_LUMA],
@@ -2084,7 +2088,6 @@ Bool TAppEncCfg::parseCfg( Int argc, TChar* argv[] )
       LOG2_DISP_PREC_LUT );
   }
   m_cCameraData.check( false, true );
-#endif
 #endif
 
   // check validity of input parameters
@@ -2269,7 +2272,7 @@ Void TAppEncCfg::xCheckParameter()
   xConfirmPara( m_scalabilityMask != 2 && m_scalabilityMask != 8 && m_scalabilityMask != 10, "Scalability Mask must be equal to 2, 8 or 10");
 #endif
 
-#if NH_3D_VSO
+#if NH_3D_VSO || NH_3D
   if ( m_scalabilityMask & ( 1 << DEPTH_ID ) )
   {
     m_dimIds.push_back( m_depthFlag ); 
@@ -2628,11 +2631,13 @@ Void TAppEncCfg::xCheckParameter()
     xConfirmPara( m_defDispWinBottomOffset % TComSPS::getWinUnitY(m_chromaFormatIDC) != 0, "Bottom default display window offset must be an integer multiple of the specified chroma subsampling");
   }
 
-#if NH_3D_VSO
+#if NH_3D_VSO || NH_3D
   xConfirmPara( m_pchCameraParameterFile    == 0                ,   "CameraParameterFile must be given");
   xConfirmPara( m_pchBaseViewCameraNumbers  == 0                ,   "BaseViewCameraNumbers must be given" );
   xConfirmPara( m_iNumberOfViews != m_cCameraData.getBaseViewNumbers().size() ,   "Number of Views in BaseViewCameraNumbers must be equal to NumberOfViews" );
   xConfirmPara    ( m_iCodedCamParPrecision < 0 || m_iCodedCamParPrecision > 5,       "CodedCamParsPrecision must be in range of 0..5" );
+#endif
+#if NH_3D_VSO
     if( m_bUseVSO )
     {
       xConfirmPara(   m_pchVSOConfig            == 0                             ,   "VSO Setup string must be given");
@@ -3392,7 +3397,7 @@ Void TAppEncCfg::xPrintParameter()
   xPrintParaVector( "ViewOrderIdx"  , m_viewOrderIndex ); 
   xPrintParaVector( "AuxId", m_auxId );
 #endif
-#if NH_3D_VSO
+#if NH_3D_VSO || NH_3D
   xPrintParaVector( "DepthLayerFlag", m_depthFlag ); 
   printf("Coded Camera Param. Precision     : %d\n", m_iCodedCamParPrecision);  
 #endif
@@ -3594,9 +3599,11 @@ Void TAppEncCfg::xPrintParameter()
   }
 
   printf("Max Num Merge Candidates          : %d\n", m_maxNumMergeCand);
-#if NH_3D_VSO
+#if NH_3D_VSO || NH_3D
   printf("BaseViewCameraNumbers             : %s\n", m_pchBaseViewCameraNumbers ); 
   printf("Coded Camera Param. Precision     : %d\n", m_iCodedCamParPrecision);
+#endif
+#if NH_3D_VSO
   printf("Force use of Lambda Scale         : %d\n", m_bForceLambdaScaleVSO );
 
   if ( m_bUseVSO )

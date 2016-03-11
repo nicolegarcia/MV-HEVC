@@ -52,15 +52,15 @@ public:
 
   // Creation
 #if H_3D_VSO_EARLY_SKIP
-  Void  create           ( Int iNumOfBaseViews, Int iNumOfModels, Int iWidth, Int iHeight, Int iShiftPrec, Int iHoleMargin, Bool bEarlySkip );
+  Void  create           ( Int iNumOfBaseViews, Int iNumOfModels, Int iWidth, Int iHeight, Int iShiftPrec, Int iHoleMargin, Bool bLimOutput, Bool bEarlySkip );
 #else
-  Void  create           ( Int iNumOfBaseViews, Int iNumOfModels, Int iWidth, Int iHeight, Int iShiftPrec, Int iHoleMargin );
+  Void  create           ( Int iNumOfBaseViews, Int iNumOfModels, Int iWidth, Int iHeight, Int iShiftPrec, Int iHoleMargin, Bool bLimOutput );
 #endif
   Void  createSingleModel( Int iBaseViewNum, Int iContent, Int iModelNum, Int iLeftViewNum, Int iRightViewNum, Bool bUseOrgRef, Int iBlendMode );
 
   // Set new Frame
   Void  setBaseView      ( Int iViewNum, TComPicYuv* pcPicYuvVideoData, TComPicYuv* pcPicYuvDepthData, TComPicYuv* pcPicYuvOrgVideoData, TComPicYuv* pcPicYuvOrgDepthData  );
-  Void  setSingleModel   ( Int iModelNum, Int** ppiShiftLutLeft, Int** ppiBaseShiftLutLeft, Int** ppiShiftLutRight, Int** ppiBaseShiftLutRight, Int iDistToLeft, TComPicYuv* pcPicYuvRefView );
+  Void  setSingleModel   ( Int iModelNum, Int** ppiShiftLutLeft, Int** ppiBaseShiftLutLeft, Int** ppiShiftLutRight, Int** ppiBaseShiftLutRight, Int iDistToLeft, TComPicYuv* pcPicYuvRefView, Int curViewIdx = VIEWPOS_INVALID );
 
   // Set horizontal offset
   Void  setupPart        ( UInt uiHorOff, Int iUsedHeight );
@@ -95,6 +95,7 @@ private:
 #if H_3D_VSO_EARLY_SKIP
   Bool   m_bEarlySkip; 
 #endif
+  Bool   m_bLimOutput; 
 
   /// Size of Video and Depth
   Int m_iWidth;

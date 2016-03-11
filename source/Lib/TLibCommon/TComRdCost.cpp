@@ -251,10 +251,12 @@ Void TComRdCost::setDistParam( UInt uiBlkWidth, UInt uiBlkHeight, DFunc eDFunc, 
     {
       rcDistParam.DistFunc = TComRdCost::xGetMaskedSAD;
     }
+#if NH_3D_VSO
     else if( eDFunc >= DF_VSD && eDFunc <= DF_VSD16N )
     {
       rcDistParam.DistFunc = TComRdCost::xGetMaskedVSD;
     }
+#endif
     else if( eDFunc >= DF_SAD12 && eDFunc <= DF_SADS48 )
     {
       rcDistParam.DistFunc = TComRdCost::xGetMaskedSAD;
@@ -625,7 +627,7 @@ UInt TComRdCost::xGetMaskedSAD( DistParam* pcDtParam )
   return uiSum >> DISTORTION_PRECISION_ADJUSTMENT(pcDtParam->bitDepth-8);
 }
 
-
+#if NH_3D_VSO
 UInt TComRdCost::xGetMaskedVSD( DistParam* pcDtParam )
 {
   const Pel* piOrg    = pcDtParam->pOrg;
@@ -659,6 +661,7 @@ UInt TComRdCost::xGetMaskedVSD( DistParam* pcDtParam )
   
   return ( uiSum );
 }
+#endif
 #endif
 // --------------------------------------------------------------------------------------------------------------------
 // SAD

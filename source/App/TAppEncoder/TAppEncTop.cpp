@@ -147,7 +147,7 @@ Void TAppEncTop::xInitLibCfg()
 #if NH_3D
   xSetCamPara              ( vps ); 
 #endif
-#if NH_3D_VSO
+#if NH_3D_VSO || NH_3D
   m_ivPicLists.setVPS      ( &vps );
 #endif
 #if NH_3D_DLT
@@ -277,13 +277,15 @@ Void TAppEncTop::xInitLibCfg()
     m_cTEncTop.setLayerId                      ( layerId );    
     m_cTEncTop.setViewId                       ( vps.getViewId      (  layerId ) );
     m_cTEncTop.setViewIndex                    ( vps.getViewIndex   (  layerId ) );
-#if NH_3D_VSO
+#if NH_3D_VSO || NH_3D
     Bool isDepth    = ( vps.getDepthId     ( layerId ) != 0  ) ;
     Bool isAuxDepth = ( vps.getAuxId       ( layerId ) ==  2 ) ; // TBD: define 2 as AUX_DEPTH
     m_cTEncTop.setIsDepth                  ( isDepth    );
     m_cTEncTop.setIsAuxDepth               ( isAuxDepth ); 
     //====== Camera Parameters =========
-    m_cTEncTop.setCameraParameters             ( &m_cCameraData );     
+    m_cTEncTop.setCameraParameters         ( &m_cCameraData );     
+#endif
+#if NH_3D_VSO
     //====== VSO =========
     m_cTEncTop.setRenderModelParameters        ( &m_cRenModStrParser ); 
     m_cTEncTop.setForceLambdaScaleVSO          ( isDepth || isAuxDepth ? m_bForceLambdaScaleVSO : false );
@@ -795,9 +797,9 @@ Void TAppEncTop::xInitLibCfg()
     if ( m_uiVSOMode == 4 )
     {
 #if H_3D_VSO_EARLY_SKIP
-      m_cRendererModel.create( m_cRenModStrParser.getNumOfBaseViews(), m_cRenModStrParser.getNumOfModels(), m_iSourceWidth, m_uiMaxCUHeight , LOG2_DISP_PREC_LUT, 0, m_bVSOEarlySkip );
+      m_cRendererModel.create( m_cRenModStrParser.getNumOfBaseViews(), m_cRenModStrParser.getNumOfModels(), m_iSourceWidth, m_uiMaxCUHeight , LOG2_DISP_PREC_LUT, 0, true, m_bVSOEarlySkip );
 #else
-      m_cRendererModel.create( m_cRenModStrParser.getNumOfBaseViews(), m_cRenModStrParser.getNumOfModels(), m_iSourceWidth, m_uiMaxCUHeight , LOG2_DISP_PREC_LUT, 0 );
+      m_cRendererModel.create( m_cRenModStrParser.getNumOfBaseViews(), m_cRenModStrParser.getNumOfModels(), m_iSourceWidth, m_uiMaxCUHeight , LOG2_DISP_PREC_LUT, 0 , true);
 #endif
       for ( Int layer = 0; layer < m_numberOfLayers ; layer++ )
       {
@@ -1035,7 +1037,7 @@ Void TAppEncTop::encode()
     }
     for ( Int gopId=0; gopId < gopSize; gopId++ )
     {
-#if NH_3D_VSO
+#if NH_3D_VSO || NH_3D
       UInt iNextPoc = m_acTEncTopList[0] -> getFrameId( gopId );
       if ( iNextPoc < m_framesToBeEncoded )
       {

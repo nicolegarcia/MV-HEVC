@@ -433,7 +433,7 @@ Void TAppRendererTop::render()
       // Write Output
 
       m_apcTVideoIOYuvSynthOutput[m_bSweep ? 0 : iSynthViewIdx]->write( pcPicYuvSynthOut, IPCOLOURSPACE_UNCHANGED, 0, 0, 0, 0, CHROMA_420 );
-    }
+   }
     iFrame++;
     iNumOfRenderedFrames++;
   }
@@ -543,9 +543,9 @@ Void TAppRendererTop::xRenderModelFromString()
 
     AOT( m_iLog2SamplingFactor != 0 );
 #if H_3D_VSO_EARLY_SKIP
-    cCurModel.create( m_cRenModStrParser.getNumOfBaseViews(), m_cRenModStrParser.getNumOfModels(), m_iSourceWidth, m_iSourceHeight, m_iShiftPrecision, m_iBlendHoleMargin, false );
+    cCurModel.create( m_cRenModStrParser.getNumOfBaseViews(), m_cRenModStrParser.getNumOfModels(), m_iSourceWidth, m_iSourceHeight, m_iShiftPrecision, m_iBlendHoleMargin, false, false );
 #else
-    cCurModel.create( m_cRenModStrParser.getNumOfBaseViews(), m_cRenModStrParser.getNumOfModels(), m_iSourceWidth, m_iSourceHeight, m_iShiftPrecision, m_iBlendHoleMargin );
+    cCurModel.create( m_cRenModStrParser.getNumOfBaseViews(), m_cRenModStrParser.getNumOfModels(), m_iSourceWidth, m_iSourceHeight, m_iShiftPrecision, m_iBlendHoleMargin, false );
 #endif
 
     cCurModel.setupPart( 0, m_iSourceHeight  ); 
@@ -724,9 +724,9 @@ Void TAppRendererTop::xRenderModelFromNums()
   AOT( m_iLog2SamplingFactor != 0 );
 
 #if H_3D_VSO_EARLY_SKIP
-  cCurModel.create( m_iNumberOfInputViews, m_iNumberOfOutputViews, m_iSourceWidth, m_iSourceHeight, m_iShiftPrecision, m_iBlendHoleMargin, false );
+  cCurModel.create( m_iNumberOfInputViews, m_iNumberOfOutputViews, m_iSourceWidth, m_iSourceHeight, m_iShiftPrecision, m_iBlendHoleMargin, false , false);
 #else
-  cCurModel.create( m_iNumberOfInputViews, m_iNumberOfOutputViews, m_iSourceWidth, m_iSourceHeight, m_iShiftPrecision, m_iBlendHoleMargin );
+  cCurModel.create( m_iNumberOfInputViews, m_iNumberOfOutputViews, m_iSourceWidth, m_iSourceHeight, m_iShiftPrecision, m_iBlendHoleMargin ,false);
 #endif
   cCurModel.setupPart( 0, m_iSourceHeight  ); 
 

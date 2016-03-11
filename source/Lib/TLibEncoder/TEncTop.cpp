@@ -90,6 +90,20 @@ TEncTop::TEncTop()
 
 TEncTop::~TEncTop()
 {
+#if NH_3D_FIX_LEAK
+#if NH_3D_IC
+  if ( m_aICEnableCandidate != NULL )
+  {
+    delete[] m_aICEnableCandidate;
+  }
+
+  if ( m_aICEnableNum != NULL )
+  {
+    delete[] m_aICEnableNum;
+  }
+#endif
+
+#endif
 #if ENC_DEC_TRACE
   if (g_hTrace != stdout)
   {
@@ -1651,7 +1665,7 @@ Void TEncTop::setupRenModel( Int iPoc, Int iEncViewIdx, Int iEncContent, Int iHo
       AOF ( pcPicYuvOrgRef );
     }
 
-    rendererModel->setSingleModel( iModelNum, ppiShiftLUTLeft, ppiBaseShiftLUTLeft, ppiShiftLUTRight, ppiBaseShiftLUTRight, iDistToLeft, pcPicYuvOrgRef );
+    rendererModel->setSingleModel( iModelNum, ppiShiftLUTLeft, ppiBaseShiftLUTLeft, ppiShiftLUTRight, ppiBaseShiftLUTRight, iDistToLeft, pcPicYuvOrgRef, iEncViewSIdx );
   }
 }
 #endif

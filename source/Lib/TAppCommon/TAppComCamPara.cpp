@@ -48,7 +48,7 @@
 #include <algorithm>
 #include <functional>
 #include <string>
-#if NH_3D_VSO
+#if NH_3D_VSO || NH_3D
 
 
 Void

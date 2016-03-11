@@ -342,7 +342,11 @@ const ComponentID   compID,
   Void  xStoreIntraResultQT       ( const ComponentID compID, TComTU &rTu);
   Void  xLoadIntraResultQT        ( const ComponentID compID, TComTU &rTu);
 #if NH_3D_DIS
-  Void xIntraCodingDIS           ( TComDataCU* pcCU, UInt uiAbsPartIdx, TComYuv* pcOrgYuv, TComYuv* pcPredYuv, Dist& ruiDist, Double& dRDCost, UInt uiPredMode );
+#if NH_3D_VSO
+  Void xIntraCodingDIS           ( TComDataCU* pcCU, UInt uiAbsPartIdx, TComYuv* pcOrgYuv, TComYuv* pcPredYuv, Dist&       ruiDist, Double& dRDCost, UInt uiPredMode );
+#else
+  Void xIntraCodingDIS           ( TComDataCU* pcCU, UInt uiAbsPartIdx, TComYuv* pcOrgYuv, TComYuv* pcPredYuv, Distortion& ruiDist, Double& dRDCost, UInt uiPredMode );
+#endif
 #endif
 
 #if NH_3D_DMM
@@ -355,7 +359,11 @@ const ComponentID   compID,
   Void xSearchDmm1Wedge           ( TComDataCU* pcCU, UInt uiAbsPtIdx, Pel* piRef, UInt uiRefStride, UInt uiWidth, UInt uiHeight, UInt& ruiTabIdx );
 #endif
 #if NH_3D_SDC_INTRA
-  Void xIntraCodingSDC            ( TComDataCU* pcCU, UInt uiAbsPartIdx, TComYuv* pcOrgYuv, TComYuv* pcPredYuv, Dist& ruiDist, Double& dRDCost, Bool bZeroResidual, Int iSDCDeltaResi    );
+#if NH_3D_VSO
+  Void xIntraCodingSDC            ( TComDataCU* pcCU, UInt uiAbsPartIdx, TComYuv* pcOrgYuv, TComYuv* pcPredYuv, Dist& ruiDist      , Double& dRDCost, Bool bZeroResidual, Int iSDCDeltaResi    );
+#else
+  Void xIntraCodingSDC            ( TComDataCU* pcCU, UInt uiAbsPartIdx, TComYuv* pcOrgYuv, TComYuv* pcPredYuv, Distortion& ruiDist, Double& dRDCost, Bool bZeroResidual, Int iSDCDeltaResi    );
+#endif
   Void xCalcConstantSDC           ( Pel* ptrSrc, UInt srcStride, UInt uiSize, Pel& valDC );
 #endif
 
