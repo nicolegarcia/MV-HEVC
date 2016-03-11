@@ -117,7 +117,7 @@ TComSlice::TComSlice()
 , m_layerId                       (0)
 , m_viewId                        (0)
 , m_viewIndex                     (0)
-#if NH_3D_VSO
+#if NH_3D_VSO || NH_3D
 , m_isDepth                       (false)
 #endif
 #if NH_MV
@@ -1922,9 +1922,6 @@ TComVPS::TComVPS()
   
   for ( Int i = 0; i < MAX_VPS_OUTPUTLAYER_SETS; i++)
   {
-#if !NH_3D_FIX_TICKET_107
-    m_layerSetIdxForOlsMinus1[i]  = -1; 
-#endif
     for ( Int j = 0; j < MAX_VPS_NUH_LAYER_ID_PLUS1; j++)
     {
       m_profileTierLevelIdx[i][j] = -1; 
@@ -2183,7 +2180,7 @@ Int TComVPS::getScalabilityId( Int layerIdInVps, ScalabilityType scalType ) cons
   return getScalabilityMaskFlag( scalType ) ? getDimensionId( layerIdInVps, scalTypeToScalIdx( scalType ) ) : 0;
 }
 
-#if NH_3D_VSO
+#if NH_3D_VSO || NH_3D
 Int TComVPS::getLayerIdInNuh( Int viewIndex, Bool depthFlag, Int auxId ) const
 {
   Int foundLayerIdinNuh = -1; 

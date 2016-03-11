@@ -246,7 +246,7 @@ private:
   // Layer identification
   Int                     m_layerId;
   Int                     m_viewId;
-#if NH_3D                 
+#if NH_3D || NH_3D_VSO
   Int                     m_viewIndex; 
   Bool                    m_isDepth;
 #endif

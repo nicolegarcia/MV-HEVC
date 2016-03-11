@@ -45,8 +45,11 @@
 #include "TLibCommon/CommonDef.h"
 #include "TLibCommon/TComSlice.h"
 #include <assert.h>
-#if NH_3D_VSO
+
+#if NH_3D
 #include "TAppCommon/TAppComCamPara.h"
+#endif
+#if NH_3D_VSO
 #include "TLibRenderer/TRenModSetupStrParser.h"
 #endif
 
@@ -457,13 +460,15 @@ protected:
   Int       m_viewIndex; 
 #endif 
 
-#if NH_3D_VSO
+#if NH_3D_VSO || NH_3D
   Bool      m_isDepth;
   Bool      m_isAuxDepth; 
 
   //====== Camera Parameters ======
   TAppComCamPara* m_cameraParameters; 
+#endif
   
+#if NH_3D_VSO
   //====== View Synthesis Optimization ======
   TRenModSetupStrParser* m_renderModelParameters; 
   Bool      m_bUseVSO;
@@ -503,9 +508,11 @@ public:
   , m_layerIdInVps(-1)
   , m_viewId(-1)
   , m_viewIndex(-1)
-#if NH_3D_VSO
+#if NH_3D_VSO || NH_3D
   , m_isDepth(false)
   , m_isAuxDepth(false)
+#endif
+#if NH_3D_VSO
   , m_bUseVSO(false)
 #endif
 #if NH_3D
@@ -554,7 +561,7 @@ public:
   Int       getViewId                        ()                   { return m_viewId;    }
   Void      setViewIndex                     ( Int viewIndex  )   { m_viewIndex  = viewIndex;  }
   Int       getViewIndex                     ()                   { return m_viewIndex;    }
-#if NH_3D_VSO
+#if NH_3D_VSO || NH_3D
   Void      setIsDepth                       ( Bool isDepth )   { m_isDepth = isDepth; }
   Bool      getIsDepth                       ()                 { return m_isDepth; }
   Void      setIsAuxDepth                    ( Bool isAuxDepth ) { m_isAuxDepth = isAuxDepth; }
@@ -1156,13 +1163,15 @@ public:
   Void      setSummaryVerboseness(UInt v)                            { m_summaryVerboseness = v; }
   UInt      getSummaryVerboseness( ) const                           { return m_summaryVerboseness; }
 
-#if NH_3D_VSO
+#if NH_3D_VSO || NH_3D
   // Only flags that are not in the SPS3dExtension should go here. 
   /// 3D Tools 
 
  //==== CAMERA PARAMETERS  ==========
   Void      setCameraParameters             ( TAppComCamPara* c) { m_cameraParameters   = c; }
- //==== VSO  ==========
+#endif
+#if NH_3D_VSO
+  //==== VSO  ==========
   Void      setRenderModelParameters ( TRenModSetupStrParser* c ) { m_renderModelParameters = c; }
   Bool      getUseVSO                       ()              { return m_bUseVSO;     }
   Void      setUseVSO                       ( Bool  b  )    { m_bUseVSO     = b; }

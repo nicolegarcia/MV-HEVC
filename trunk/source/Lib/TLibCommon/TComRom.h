@@ -149,12 +149,6 @@ extern std::map< Level::Name, TComGeneralTierAndLevelLimits > g_generalTierAndLe
 // Misc.
 // ====================================================================================================================
 extern       SChar   g_aucConvertToBit  [ MAX_CU_SIZE+1 ];   // from width to log2(width)-2
-#if NH_MV
-// Change later
-#ifndef ENC_DEC_TRACE
-#define ENC_DEC_TRACE 0
-#endif
-#endif
 #if ENC_DEC_TRACE
 extern FILE*  g_hTrace;
 extern Bool   g_bJustDoIt;
