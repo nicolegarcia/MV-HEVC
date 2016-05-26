@@ -94,6 +94,9 @@ protected:
   Void xParseSEIKneeFunctionInfo              (SEIKneeFunctionInfo& sei,              UInt payloadSize,                     std::ostream *pDecodedMessageOutputStream);
   Void xParseSEIMasteringDisplayColourVolume  (SEIMasteringDisplayColourVolume& sei,  UInt payloadSize,                     std::ostream *pDecodedMessageOutputStream);
   Void xParseSEIColourRemappingInfo           (SEIColourRemappingInfo& sei,           UInt payloadSize,                     std::ostream *pDecodedMessageOutputStream);
+#if U0033_ALTERNATIVE_TRANSFER_CHARACTERISTICS_SEI
+  Void xParseSEIAlternativeTransferCharacteristics(SEIAlternativeTransferCharacteristics& sei,              UInt payLoadSize,                     std::ostream *pDecodedMessageOutputStream);
+#endif
 #if NH_MV
   Void xParseSEILayersNotPresent              (SEILayersNotPresent &sei, UInt payloadSize, const TComVPS *vps ,std::ostream *pDecodedMessageOutputStream);
   Void xParseSEIInterLayerConstrainedTileSets (SEIInterLayerConstrainedTileSets& sei, UInt payloadSize, std::ostream *pDecodedMessageOutputStream);

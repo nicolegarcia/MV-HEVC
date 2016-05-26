@@ -71,9 +71,9 @@ inline Int64 abs (Int64 x) { return _abs64(x); };
 // ====================================================================================================================
 #if NH_MV
 #define NV_VERSION        "16.1"                ///< Current software version
-#define HM_VERSION        "16.7"                ///< 
+#define HM_VERSION        "16.9"                ///< 
 #else
-#define NV_VERSION        "16.7"                 ///< Current software version
+#define NV_VERSION        "16.9"                 ///< Current software version
 #endif
 // ====================================================================================================================
 // Platform information
@@ -265,6 +265,11 @@ static const Int SCALING_LIST_DC =                                16 ; ///< defa
 
 static const Int CONTEXT_STATE_BITS =                              6 ;
 static const Int LAST_SIGNIFICANT_GROUPS =                        10 ;
+
+#if W0038_DB_OPT
+static const Int MAX_ENCODER_DEBLOCKING_QUALITY_LAYERS =           8 ;
+#endif
+
 
 #if NH_MV
 static const Int  MAX_VPS_NUM_ADD_LAYER_SETS =                  1024 ;

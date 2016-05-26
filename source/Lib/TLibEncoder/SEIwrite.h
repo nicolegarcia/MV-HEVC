@@ -74,6 +74,9 @@ protected:
   Void xWriteSEIKneeFunctionInfo(const SEIKneeFunctionInfo &sei);
   Void xWriteSEIColourRemappingInfo(const SEIColourRemappingInfo& sei);
   Void xWriteSEIMasteringDisplayColourVolume( const SEIMasteringDisplayColourVolume& sei);
+#if U0033_ALTERNATIVE_TRANSFER_CHARACTERISTICS_SEI
+  Void xWriteSEIAlternativeTransferCharacteristics(const SEIAlternativeTransferCharacteristics& sei);
+#endif
 
 #if NH_MV
   Void xWriteSEILayersNotPresent              ( const SEILayersNotPresent& sei);

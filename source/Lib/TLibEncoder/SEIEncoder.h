@@ -81,6 +81,9 @@ public:
   Void initSEIChromaResamplingFilterHint(SEIChromaResamplingFilterHint *sei, Int iHorFilterIndex, Int iVerFilterIndex);
   Void initSEITimeCode(SEITimeCode *sei);
   Bool initSEIColourRemappingInfo(SEIColourRemappingInfo *sei, Int currPOC); // returns true on success, false on failure.
+#if U0033_ALTERNATIVE_TRANSFER_CHARACTERISTICS_SEI
+  Void initSEIAlternativeTransferCharacteristics(SEIAlternativeTransferCharacteristics *sei);
+#endif
 
   // trailing SEIs
   Void initDecodedPictureHashSEI(SEIDecodedPictureHash *sei, TComPic *pcPic, std::string &rHashString, const BitDepths &bitDepths);
