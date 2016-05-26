@@ -166,7 +166,6 @@ protected:
 #endif
   Void  xCheckRDCostIntra   ( TComDataCU *&rpcBestCU,
                               TComDataCU *&rpcTempCU,
-                              Double      &cost,
                               PartSize     ePartSize
                               DEBUG_STRING_FN_DECLARE(sDebug)
 #if NH_3D_ENC_DEPTH
