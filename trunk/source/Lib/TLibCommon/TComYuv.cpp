@@ -3,7 +3,7 @@
  * and contributor rights, including patent rights, and no such rights are
  * granted under this license.
  *
- * Copyright (c) 2010-2015, ITU/ISO/IEC
+ * Copyright (c) 2010-2016, ITU/ISO/IEC
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -58,10 +58,12 @@ TComYuv::TComYuv()
 
 TComYuv::~TComYuv()
 {
+  destroy();
 }
 
 Void TComYuv::create( UInt iWidth, UInt iHeight, ChromaFormat chromaFormatIDC )
 {
+  destroy();
   // set width and height
   m_iWidth   = iWidth;
   m_iHeight  = iHeight;

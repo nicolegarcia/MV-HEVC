@@ -3,7 +3,7 @@
  * and contributor rights, including patent rights, and no such rights are
  * granted under this license.
  *
- * Copyright (c) 2010-2015, ITU/ISO/IEC
+ * Copyright (c) 2010-2016, ITU/ISO/IEC
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -48,69 +48,31 @@
 TEncSlice::TEncSlice()
  : m_encCABACTableIdx(I_SLICE)
 {
-  m_apcPicYuvPred = NULL;
-  m_apcPicYuvResi = NULL;
-
-  m_pdRdPicLambda = NULL;
-  m_pdRdPicQp     = NULL;
-  m_piRdPicQp     = NULL;
 }
 
 TEncSlice::~TEncSlice()
 {
+  destroy();
 }
 
 Void TEncSlice::create( Int iWidth, Int iHeight, ChromaFormat chromaFormat, UInt iMaxCUWidth, UInt iMaxCUHeight, UChar uhTotalDepth )
 {
   // create prediction picture
-  if ( m_apcPicYuvPred == NULL )
-  {
-    m_apcPicYuvPred  = new TComPicYuv;
-    m_apcPicYuvPred->create( iWidth, iHeight, chromaFormat, iMaxCUWidth, iMaxCUHeight, uhTotalDepth, true );
-  }
+  m_picYuvPred.create( iWidth, iHeight, chromaFormat, iMaxCUWidth, iMaxCUHeight, uhTotalDepth, true );
 
   // create residual picture
-  if( m_apcPicYuvResi == NULL )
-  {
-    m_apcPicYuvResi  = new TComPicYuv;
-    m_apcPicYuvResi->create( iWidth, iHeight, chromaFormat, iMaxCUWidth, iMaxCUHeight, uhTotalDepth, true );
-  }
+  m_picYuvResi.create( iWidth, iHeight, chromaFormat, iMaxCUWidth, iMaxCUHeight, uhTotalDepth, true );
 }
 
 Void TEncSlice::destroy()
 {
-  // destroy prediction picture
-  if ( m_apcPicYuvPred )
-  {
-    m_apcPicYuvPred->destroy();
-    delete m_apcPicYuvPred;
-    m_apcPicYuvPred  = NULL;
-  }
-
-  // destroy residual picture
-  if ( m_apcPicYuvResi )
-  {
-    m_apcPicYuvResi->destroy();
-    delete m_apcPicYuvResi;
-    m_apcPicYuvResi  = NULL;
-  }
+  m_picYuvPred.destroy();
+  m_picYuvResi.destroy();
 
   // free lambda and QP arrays
-  if ( m_pdRdPicLambda )
-  {
-    xFree( m_pdRdPicLambda );
-    m_pdRdPicLambda = NULL;
-  }
-  if ( m_pdRdPicQp )
-  {
-    xFree( m_pdRdPicQp );
-    m_pdRdPicQp = NULL;
-  }
-  if ( m_piRdPicQp )
-  {
-    xFree( m_piRdPicQp );
-    m_piRdPicQp = NULL;
-  }
+  m_vdRdPicLambda.clear();
+  m_vdRdPicQp.clear();
+  m_viRdPicQp.clear();
 }
 
 Void TEncSlice::init( TEncTop* pcEncTop )
@@ -132,9 +94,9 @@ Void TEncSlice::init( TEncTop* pcEncTop )
   m_pcRDGoOnSbacCoder = pcEncTop->getRDGoOnSbacCoder();
 
   // create lambda and QP arrays
-  m_pdRdPicLambda     = (Double*)xMalloc( Double, m_pcCfg->getDeltaQpRD() * 2 + 1 );
-  m_pdRdPicQp         = (Double*)xMalloc( Double, m_pcCfg->getDeltaQpRD() * 2 + 1 );
-  m_piRdPicQp         = (Int*   )xMalloc( Int,    m_pcCfg->getDeltaQpRD() * 2 + 1 );
+  m_vdRdPicLambda.resize(m_pcCfg->getDeltaQpRD() * 2 + 1 );
+  m_vdRdPicQp.resize(    m_pcCfg->getDeltaQpRD() * 2 + 1 );
+  m_viRdPicQp.resize(    m_pcCfg->getDeltaQpRD() * 2 + 1 );
 #if KWU_RC_MADPRED_E0227
   if(m_pcCfg->getUseRateCtrl())
   {
@@ -426,17 +388,24 @@ Void TEncSlice::initEncSlice( TComPic* pcPic, const Int pocLast, const Int pocCu
       dLambda *= 0.95;
     }
 
+#if W0062_RECALCULATE_QP_TO_ALIGN_WITH_LAMBDA
+    Double lambdaRef = 0.57*pow(2.0, qp_temp/3.0);
+    // QP correction due to modified lambda
+    Double qpOffset = floor((3.0*log(dLambda/lambdaRef)/log(2.0)) +0.5);
+    dQP += qpOffset;
+#endif
+
     iQP = max( -rpcSlice->getSPS()->getQpBDOffset(CHANNEL_TYPE_LUMA), min( MAX_QP, (Int) floor( dQP + 0.5 ) ) );
 
-    m_pdRdPicLambda[iDQpIdx] = dLambda;
-    m_pdRdPicQp    [iDQpIdx] = dQP;
-    m_piRdPicQp    [iDQpIdx] = iQP;
+    m_vdRdPicLambda[iDQpIdx] = dLambda;
+    m_vdRdPicQp    [iDQpIdx] = dQP;
+    m_viRdPicQp    [iDQpIdx] = iQP;
   }
 
   // obtain dQP = 0 case
-  dLambda = m_pdRdPicLambda[0];
-  dQP     = m_pdRdPicQp    [0];
-  iQP     = m_piRdPicQp    [0];
+  dLambda = m_vdRdPicLambda[0];
+  dQP     = m_vdRdPicQp    [0];
+  iQP     = m_viRdPicQp    [0];
 
 
 #if NH_MV
@@ -445,6 +414,27 @@ Void TEncSlice::initEncSlice( TComPic* pcPic, const Int pocLast, const Int pocCu
   const Int temporalId=m_pcCfg->getGOPEntry(iGOPid).m_temporalId;
 #endif
   const std::vector<Double> &intraLambdaModifiers=m_pcCfg->getIntraLambdaModifier();
+
+#if W0038_CQP_ADJ
+  if(rpcSlice->getPPS()->getSliceChromaQpFlag())
+  {
+    const Bool bUseIntraOrPeriodicOffset = rpcSlice->getSliceType()==I_SLICE || (m_pcCfg->getSliceChromaOffsetQpPeriodicity()!=0 && (rpcSlice->getPOC()%m_pcCfg->getSliceChromaOffsetQpPeriodicity())==0);
+    Int cbQP = bUseIntraOrPeriodicOffset? m_pcCfg->getSliceChromaOffsetQpIntraOrPeriodic(false) : m_pcCfg->getGOPEntry(iGOPid).m_CbQPoffset;
+    Int crQP = bUseIntraOrPeriodicOffset? m_pcCfg->getSliceChromaOffsetQpIntraOrPeriodic(true)  : m_pcCfg->getGOPEntry(iGOPid).m_CrQPoffset;
+
+    cbQP = Clip3( -12, 12, cbQP + rpcSlice->getPPS()->getQpOffset(COMPONENT_Cb) ) - rpcSlice->getPPS()->getQpOffset(COMPONENT_Cb); 
+    crQP = Clip3( -12, 12, crQP + rpcSlice->getPPS()->getQpOffset(COMPONENT_Cr) ) - rpcSlice->getPPS()->getQpOffset(COMPONENT_Cr); 
+    rpcSlice->setSliceChromaQpDelta(COMPONENT_Cb, Clip3( -12, 12, cbQP));
+    assert(rpcSlice->getSliceChromaQpDelta(COMPONENT_Cb)+rpcSlice->getPPS()->getQpOffset(COMPONENT_Cb)<=12 && rpcSlice->getSliceChromaQpDelta(COMPONENT_Cb)+rpcSlice->getPPS()->getQpOffset(COMPONENT_Cb)>=-12);
+    rpcSlice->setSliceChromaQpDelta(COMPONENT_Cr, Clip3( -12, 12, crQP));
+    assert(rpcSlice->getSliceChromaQpDelta(COMPONENT_Cr)+rpcSlice->getPPS()->getQpOffset(COMPONENT_Cr)<=12 && rpcSlice->getSliceChromaQpDelta(COMPONENT_Cr)+rpcSlice->getPPS()->getQpOffset(COMPONENT_Cr)>=-12);
+  }
+  else
+  {
+    rpcSlice->setSliceChromaQpDelta( COMPONENT_Cb, 0 );
+    rpcSlice->setSliceChromaQpDelta( COMPONENT_Cr, 0 );
+  }
+#endif
 
   Double lambdaModifier;
   if( rpcSlice->getSliceType( ) != I_SLICE || intraLambdaModifiers.empty())
@@ -516,8 +506,10 @@ Void TEncSlice::initEncSlice( TComPic* pcPic, const Int pocLast, const Int pocCu
   rpcSlice->setSliceQpBase       ( iQP );
 #endif
   rpcSlice->setSliceQpDelta      ( 0 );
+#if !W0038_CQP_ADJ
   rpcSlice->setSliceChromaQpDelta( COMPONENT_Cb, 0 );
   rpcSlice->setSliceChromaQpDelta( COMPONENT_Cr, 0 );
+#endif
   rpcSlice->setUseChromaQpAdj( rpcSlice->getPPS()->getPpsRangeExtension().getChromaQpOffsetListEnabledFlag() );
 #if NH_MV
   rpcSlice->setNumRefIdx(REF_PIC_LIST_0,m_pcCfg->getGOPEntry( (eSliceTypeBaseView == I_SLICE) ? MAX_GOP : iGOPid ).m_numRefPicsActive);
@@ -574,11 +566,8 @@ Void TEncSlice::initEncSlice( TComPic* pcPic, const Int pocLast, const Int pocCu
   }
   rpcSlice->setTLayer( pcPic->getTLayer() );
 
-  assert( m_apcPicYuvPred );
-  assert( m_apcPicYuvResi );
-
-  pcPic->setPicYuvPred( m_apcPicYuvPred );
-  pcPic->setPicYuvResi( m_apcPicYuvResi );
+  pcPic->setPicYuvPred( &m_picYuvPred );
+  pcPic->setPicYuvResi( &m_picYuvResi );
   rpcSlice->setSliceMode            ( m_pcCfg->getSliceMode()            );
   rpcSlice->setSliceArgument        ( m_pcCfg->getSliceArgument()        );
   rpcSlice->setSliceSegmentMode     ( m_pcCfg->getSliceSegmentMode()     );
@@ -678,22 +667,22 @@ Void TEncSlice::precompressSlice( TComPic* pcPic )
   // set frame lambda
   if (m_pcCfg->getGOPSize() > 1)
   {
-    dFrameLambda = 0.68 * pow (2, (m_piRdPicQp[0]  - SHIFT_QP) / 3.0) * (pcSlice->isInterB()? 2 : 1);
+    dFrameLambda = 0.68 * pow (2, (m_viRdPicQp[0]  - SHIFT_QP) / 3.0) * (pcSlice->isInterB()? 2 : 1);
   }
   else
   {
-    dFrameLambda = 0.68 * pow (2, (m_piRdPicQp[0] - SHIFT_QP) / 3.0);
+    dFrameLambda = 0.68 * pow (2, (m_viRdPicQp[0] - SHIFT_QP) / 3.0);
   }
   m_pcRdCost      ->setFrameLambda(dFrameLambda);
 
   // for each QP candidate
   for ( UInt uiQpIdx = 0; uiQpIdx < 2 * m_pcCfg->getDeltaQpRD() + 1; uiQpIdx++ )
   {
-    pcSlice       ->setSliceQp             ( m_piRdPicQp    [uiQpIdx] );
+    pcSlice       ->setSliceQp             ( m_viRdPicQp    [uiQpIdx] );
 #if ADAPTIVE_QP_SELECTION
-    pcSlice       ->setSliceQpBase         ( m_piRdPicQp    [uiQpIdx] );
+    pcSlice       ->setSliceQpBase         ( m_viRdPicQp    [uiQpIdx] );
 #endif
-    setUpLambda(pcSlice, m_pdRdPicLambda[uiQpIdx], m_piRdPicQp    [uiQpIdx]);
+    setUpLambda(pcSlice, m_vdRdPicLambda[uiQpIdx], m_viRdPicQp    [uiQpIdx]);
 
     // try compress
     compressSlice   ( pcPic, true, m_pcCfg->getFastDeltaQp());
@@ -729,11 +718,11 @@ Void TEncSlice::precompressSlice( TComPic* pcPic )
   }
 
   // set best values
-  pcSlice       ->setSliceQp             ( m_piRdPicQp    [uiQpIdxBest] );
+  pcSlice       ->setSliceQp             ( m_viRdPicQp    [uiQpIdxBest] );
 #if ADAPTIVE_QP_SELECTION
-  pcSlice       ->setSliceQpBase         ( m_piRdPicQp    [uiQpIdxBest] );
+  pcSlice       ->setSliceQpBase         ( m_viRdPicQp    [uiQpIdxBest] );
 #endif
-  setUpLambda(pcSlice, m_pdRdPicLambda[uiQpIdxBest], m_piRdPicQp    [uiQpIdxBest]);
+  setUpLambda(pcSlice, m_vdRdPicLambda[uiQpIdxBest], m_viRdPicQp    [uiQpIdxBest]);
 }
 
 Void TEncSlice::calCostSliceI(TComPic* pcPic) // TODO: this only analyses the first slice segment. What about the others?
