@@ -3,7 +3,7 @@
  * and contributor rights, including patent rights, and no such rights are
  * granted under this license.
  *
- * Copyright (c) 2010-2015, ITU/ISO/IEC
+ * Copyright (c) 2010-2016, ITU/ISO/IEC
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -107,6 +107,9 @@ TEncGOP::TEncGOP()
 #endif
   m_associatedIRAPType = NAL_UNIT_CODED_SLICE_IDR_N_LP;
   m_associatedIRAPPOC  = 0;
+#if W0038_DB_OPT
+  m_pcDeblockingTempPicYuv = NULL;
+#endif
   return;
 }
 
@@ -124,6 +127,14 @@ Void  TEncGOP::create()
 
 Void  TEncGOP::destroy()
 {
+#if W0038_DB_OPT
+  if (m_pcDeblockingTempPicYuv)
+  {
+    m_pcDeblockingTempPicYuv->destroy();
+    delete m_pcDeblockingTempPicYuv;
+    m_pcDeblockingTempPicYuv = NULL;
+  }
+#endif
 }
 
 Void TEncGOP::init ( TEncTop* pcTEncTop )
@@ -501,6 +512,14 @@ Void TEncGOP::xCreateIRAPLeadingSEIMessages (SEIMessages& seiMessages, const TCo
     m_seiEncoder.initSEIChromaResamplingFilterHint(seiChromaResamplingFilterHint, m_pcCfg->getChromaResamplingHorFilterIdc(), m_pcCfg->getChromaResamplingVerFilterIdc());
     seiMessages.push_back(seiChromaResamplingFilterHint);
   }
+#if U0033_ALTERNATIVE_TRANSFER_CHARACTERISTICS_SEI
+  if(m_pcCfg->getSEIAlternativeTransferCharacteristicsSEIEnable())
+  {
+    SEIAlternativeTransferCharacteristics *seiAlternativeTransferCharacteristics = new SEIAlternativeTransferCharacteristics;
+    m_seiEncoder.initSEIAlternativeTransferCharacteristics(seiAlternativeTransferCharacteristics);
+    seiMessages.push_back(seiAlternativeTransferCharacteristics);
+  }
+#endif
 }
 
 Void TEncGOP::xCreatePerPictureSEIMessages (Int picInGOP, SEIMessages& seiMessages, SEIMessages& nestedSeiMessages, TComSlice *slice)
@@ -1726,10 +1745,17 @@ Void TEncGOP::compressGOP( Int iPOCLast, Int iNumPicRcvd, TComList<TComPic*>& rc
 
         estimatedCpbFullness -= m_pcRateCtrl->getBufferingRate();
         // prevent underflow
+#if V0078_ADAPTIVE_LOWER_BOUND
+        if (estimatedCpbFullness - estimatedBits < m_pcRateCtrl->getRCPic()->getLowerBound())
+        {
+          estimatedBits = max(200, estimatedCpbFullness - m_pcRateCtrl->getRCPic()->getLowerBound());
+        }
+#else
         if (estimatedCpbFullness - estimatedBits < (Int)(m_pcRateCtrl->getCpbSize()*0.1f))
         {
           estimatedBits = max(200, estimatedCpbFullness - (Int)(m_pcRateCtrl->getCpbSize()*0.1f));
         }
+#endif
 
         m_pcRateCtrl->getRCPic()->setTargetBits(estimatedBits);
       }
@@ -1768,10 +1794,17 @@ Void TEncGOP::compressGOP( Int iPOCLast, Int iNumPicRcvd, TComList<TComPic*>& rc
 
             estimatedCpbFullness -= m_pcRateCtrl->getBufferingRate();
             // prevent underflow
+#if V0078_ADAPTIVE_LOWER_BOUND
+            if (estimatedCpbFullness - bits < m_pcRateCtrl->getRCPic()->getLowerBound())
+            {
+              bits = estimatedCpbFullness - m_pcRateCtrl->getRCPic()->getLowerBound();
+            }
+#else
             if (estimatedCpbFullness - bits < (Int)(m_pcRateCtrl->getCpbSize()*0.1f))
             {
               bits = estimatedCpbFullness - (Int)(m_pcRateCtrl->getCpbSize()*0.1f);
             }
+#endif
           }
 #endif
 
@@ -1901,7 +1934,18 @@ Void TEncGOP::compressGOP( Int iPOCLast, Int iNumPicRcvd, TComList<TComPic*>& rc
     m_pcLoopFilter->setCfg(bLFCrossTileBoundary);
     if ( m_pcCfg->getDeblockingFilterMetric() )
     {
+#if W0038_DB_OPT
+      if ( m_pcCfg->getDeblockingFilterMetric()==2 )
+      {
+        applyDeblockingFilterParameterSelection(pcPic, uiNumSliceSegments, iGOPid);
+      }
+      else
+      {
+#endif
       applyDeblockingFilterMetric(pcPic, uiNumSliceSegments);
+#if W0038_DB_OPT
+      }
+#endif
     }
     m_pcLoopFilter->loopFilterPic( pcPic );
 
@@ -1953,7 +1997,16 @@ Void TEncGOP::compressGOP( Int iPOCLast, Int iNumPicRcvd, TComList<TComPic*>& rc
       tempBitCounter.resetBits();
       m_pcEncTop->getRDGoOnSbacCoder()->setBitstream(&tempBitCounter);
       m_pcSAO->initRDOCabacCoder(m_pcEncTop->getRDGoOnSbacCoder(), pcSlice);
+#if OPTIONAL_RESET_SAO_ENCODING_AFTER_IRAP
+      m_pcSAO->SAOProcess(pcPic, sliceEnabled, pcPic->getSlice(0)->getLambdas(),
+                          m_pcCfg->getTestSAODisableAtPictureLevel(),
+                          m_pcCfg->getSaoEncodingRate(),
+                          m_pcCfg->getSaoEncodingRateChroma(),
+                          m_pcCfg->getSaoCtuBoundary(),
+                          m_pcCfg->getSaoResetEncoderStateAfterIRAP());
+#else
       m_pcSAO->SAOProcess(pcPic, sliceEnabled, pcPic->getSlice(0)->getLambdas(), m_pcCfg->getTestSAODisableAtPictureLevel(), m_pcCfg->getSaoEncodingRate(), m_pcCfg->getSaoEncodingRateChroma(), m_pcCfg->getSaoCtuBoundary());
+#endif
       m_pcSAO->PCMLFDisableProcess(pcPic);
       m_pcEncTop->getRDGoOnSbacCoder()->setBitstream(NULL);
 
@@ -2185,10 +2238,10 @@ Void TEncGOP::printOutSummary(UInt uiNumAllPicCoded, Bool isField, const Bool pr
 
   //--CFG_KDY
   const Int rateMultiplier=(isField?2:1);
-  m_gcAnalyzeAll.setFrmRate( m_pcCfg->getFrameRate()*rateMultiplier );
-  m_gcAnalyzeI.setFrmRate( m_pcCfg->getFrameRate()*rateMultiplier );
-  m_gcAnalyzeP.setFrmRate( m_pcCfg->getFrameRate()*rateMultiplier );
-  m_gcAnalyzeB.setFrmRate( m_pcCfg->getFrameRate()*rateMultiplier );
+  m_gcAnalyzeAll.setFrmRate( m_pcCfg->getFrameRate()*rateMultiplier / (Double)m_pcCfg->getTemporalSubsampleRatio());
+  m_gcAnalyzeI.setFrmRate( m_pcCfg->getFrameRate()*rateMultiplier / (Double)m_pcCfg->getTemporalSubsampleRatio());
+  m_gcAnalyzeP.setFrmRate( m_pcCfg->getFrameRate()*rateMultiplier / (Double)m_pcCfg->getTemporalSubsampleRatio());
+  m_gcAnalyzeB.setFrmRate( m_pcCfg->getFrameRate()*rateMultiplier / (Double)m_pcCfg->getTemporalSubsampleRatio());
   const ChromaFormat chFmt = m_pcCfg->getChromaFormatIdc();
 
   //-- all
@@ -2223,7 +2276,11 @@ Void TEncGOP::printOutSummary(UInt uiNumAllPicCoded, Bool isField, const Bool pr
   if(isField)
   {
     //-- interlaced summary
+#if TEMPORAL_SUBSAMPLE
+    m_gcAnalyzeAll_in.setFrmRate( m_pcCfg->getFrameRate() / (Double)m_pcCfg->getTemporalSubsampleRatio());
+#else
     m_gcAnalyzeAll_in.setFrmRate( m_pcCfg->getFrameRate());
+#endif
     m_gcAnalyzeAll_in.setBits(m_gcAnalyzeAll.getBits());
     // prior to the above statement, the interlace analyser does not contain the correct total number of bits.
 
@@ -2958,8 +3015,8 @@ Void TEncGOP::applyDeblockingFilterMetric( TComPic* pcPic, UInt uiNumSlices )
   const UInt noRows = (picHeight>>log2maxTB);
   assert(noCol > 1);
   assert(noRows > 1);
-  UInt64 *colSAD = (UInt64*)malloc(noCol*sizeof(UInt64));
-  UInt64 *rowSAD = (UInt64*)malloc(noRows*sizeof(UInt64));
+  std::vector<UInt64> colSAD(noCol,  UInt64(0));
+  std::vector<UInt64> rowSAD(noRows, UInt64(0));
   UInt colIdx = 0;
   UInt rowIdx = 0;
   Pel p0, p1, p2, q0, q1, q2;
@@ -2971,9 +3028,6 @@ Void TEncGOP::applyDeblockingFilterMetric( TComPic* pcPic, UInt uiNumSlices )
   const Int thr2 = (beta>>2);
   const Int thr1 = 2*bitdepthScale;
   UInt a = 0;
-
-  memset(colSAD, 0, noCol*sizeof(UInt64));
-  memset(rowSAD, 0, noRows*sizeof(UInt64));
 
   if (maxTBsize > minBlockArtSize)
   {
@@ -3063,10 +3117,128 @@ Void TEncGOP::applyDeblockingFilterMetric( TComPic* pcPic, UInt uiNumSlices )
       pcPic->getSlice(i)->setDeblockingFilterTcOffsetDiv2(   pcPic->getSlice(i)->getPPS()->getDeblockingFilterTcOffsetDiv2()   );
     }
   }
-
-  free(colSAD);
-  free(rowSAD);
 }
+
+#if W0038_DB_OPT
+Void TEncGOP::applyDeblockingFilterParameterSelection( TComPic* pcPic, const UInt numSlices, const Int gopID )
+{
+  enum DBFltParam
+  {
+    DBFLT_PARAM_AVAILABLE = 0,
+    DBFLT_DISABLE_FLAG,
+    DBFLT_BETA_OFFSETD2,
+    DBFLT_TC_OFFSETD2,
+    //NUM_DBFLT_PARAMS
+  };
+  const Int MAX_BETA_OFFSET = 3;
+  const Int MIN_BETA_OFFSET = -3;
+  const Int MAX_TC_OFFSET = 3;
+  const Int MIN_TC_OFFSET = -3;
+
+  TComPicYuv* pcPicYuvRec = pcPic->getPicYuvRec();
+  TComPicYuv* pcPicYuvOrg = pcPic ->getPicYuvOrg();
+
+  const Int currQualityLayer = (pcPic->getSlice(0)->getSliceType() != I_SLICE) ? m_pcCfg->getGOPEntry(gopID).m_temporalId+1 : 0;
+  assert(currQualityLayer <MAX_ENCODER_DEBLOCKING_QUALITY_LAYERS);
+
+  if(!m_pcDeblockingTempPicYuv)
+  {
+    m_pcDeblockingTempPicYuv         = new TComPicYuv;
+    m_pcDeblockingTempPicYuv->create( m_pcEncTop->getSourceWidth(), m_pcEncTop->getSourceHeight(), m_pcEncTop->getChromaFormatIdc(),  pcPic->getSlice(0)->getSPS()->getMaxCUWidth(), pcPic->getSlice(0)->getSPS()->getMaxCUHeight(), pcPic->getSlice(0)->getSPS()->getMaxTotalCUDepth(),true );
+    memset(m_DBParam, 0, sizeof(m_DBParam));
+  }
+
+  //preserve current reconstruction
+  pcPicYuvRec->copyToPic(m_pcDeblockingTempPicYuv);
+
+  const Bool bNoFiltering      = m_DBParam[currQualityLayer][DBFLT_PARAM_AVAILABLE] && m_DBParam[currQualityLayer][DBFLT_DISABLE_FLAG]==false /*&& pcPic->getTLayer()==0*/;
+  const Int  maxBetaOffsetDiv2 = bNoFiltering? Clip3(MIN_BETA_OFFSET, MAX_BETA_OFFSET, m_DBParam[currQualityLayer][DBFLT_BETA_OFFSETD2]+1) : MAX_BETA_OFFSET;
+  const Int  minBetaOffsetDiv2 = bNoFiltering? Clip3(MIN_BETA_OFFSET, MAX_BETA_OFFSET, m_DBParam[currQualityLayer][DBFLT_BETA_OFFSETD2]-1) : MIN_BETA_OFFSET;
+  const Int  maxTcOffsetDiv2   = bNoFiltering? Clip3(MIN_TC_OFFSET, MAX_TC_OFFSET, m_DBParam[currQualityLayer][DBFLT_TC_OFFSETD2]+2)       : MAX_TC_OFFSET;
+  const Int  minTcOffsetDiv2   = bNoFiltering? Clip3(MIN_TC_OFFSET, MAX_TC_OFFSET, m_DBParam[currQualityLayer][DBFLT_TC_OFFSETD2]-2)       : MIN_TC_OFFSET;
+
+  UInt64 distBetaPrevious      = std::numeric_limits<UInt64>::max();
+  UInt64 distMin               = std::numeric_limits<UInt64>::max();
+  Bool   bDBFilterDisabledBest = true;
+  Int    betaOffsetDiv2Best    = 0;
+  Int    tcOffsetDiv2Best      = 0;
+
+  for(Int betaOffsetDiv2=maxBetaOffsetDiv2; betaOffsetDiv2>=minBetaOffsetDiv2; betaOffsetDiv2--)
+  {
+    UInt64 distTcMin = std::numeric_limits<UInt64>::max();
+    for(Int tcOffsetDiv2=maxTcOffsetDiv2; tcOffsetDiv2 >= minTcOffsetDiv2; tcOffsetDiv2--)
+    {
+      for (Int i=0; i<numSlices; i++)
+      {
+        pcPic->getSlice(i)->setDeblockingFilterOverrideFlag(true);
+        pcPic->getSlice(i)->setDeblockingFilterDisable(false);
+        pcPic->getSlice(i)->setDeblockingFilterBetaOffsetDiv2( betaOffsetDiv2 );
+        pcPic->getSlice(i)->setDeblockingFilterTcOffsetDiv2( tcOffsetDiv2 );
+      }
+      m_pcDeblockingTempPicYuv->copyToPic(pcPicYuvRec); // restore reconstruction
+      m_pcLoopFilter->loopFilterPic( pcPic );
+      const UInt64 dist = xFindDistortionFrame(pcPicYuvOrg, pcPicYuvRec, pcPic->getPicSym()->getSPS().getBitDepths());
+      if(dist < distMin)
+      {
+        distMin = dist;
+        bDBFilterDisabledBest = false;
+        betaOffsetDiv2Best  = betaOffsetDiv2;
+        tcOffsetDiv2Best = tcOffsetDiv2;
+      }
+      if(dist < distTcMin)
+      {
+        distTcMin = dist;
+      }
+      else if(tcOffsetDiv2 <-2)
+      {
+        break;
+      }
+    }
+    if(betaOffsetDiv2<-1 && distTcMin >= distBetaPrevious)
+    {
+      break;
+    }
+    distBetaPrevious = distTcMin;
+  }
+
+  //update:
+  m_DBParam[currQualityLayer][DBFLT_PARAM_AVAILABLE] = 1;
+  m_DBParam[currQualityLayer][DBFLT_DISABLE_FLAG]    = bDBFilterDisabledBest;
+  m_DBParam[currQualityLayer][DBFLT_BETA_OFFSETD2]   = betaOffsetDiv2Best;
+  m_DBParam[currQualityLayer][DBFLT_TC_OFFSETD2]     = tcOffsetDiv2Best;
+
+  m_pcDeblockingTempPicYuv->copyToPic(pcPicYuvRec); //restore reconstruction
+
+  if(bDBFilterDisabledBest)
+  {
+    for (Int i=0; i<numSlices; i++)
+    {
+      pcPic->getSlice(i)->setDeblockingFilterOverrideFlag(true);
+      pcPic->getSlice(i)->setDeblockingFilterDisable(true);
+    }
+  }
+  else if(betaOffsetDiv2Best ==pcPic->getSlice(0)->getPPS()->getDeblockingFilterBetaOffsetDiv2() &&  tcOffsetDiv2Best==pcPic->getSlice(0)->getPPS()->getDeblockingFilterTcOffsetDiv2())
+  {
+    for (Int i=0; i<numSlices; i++)
+    {
+      pcPic->getSlice(i)->setDeblockingFilterOverrideFlag(false);
+      pcPic->getSlice(i)->setDeblockingFilterDisable(        pcPic->getSlice(i)->getPPS()->getPicDisableDeblockingFilterFlag() );
+      pcPic->getSlice(i)->setDeblockingFilterBetaOffsetDiv2( pcPic->getSlice(i)->getPPS()->getDeblockingFilterBetaOffsetDiv2() );
+      pcPic->getSlice(i)->setDeblockingFilterTcOffsetDiv2(   pcPic->getSlice(i)->getPPS()->getDeblockingFilterTcOffsetDiv2()   );
+    }
+  }
+  else
+  {
+    for (Int i=0; i<numSlices; i++)
+    {
+      pcPic->getSlice(i)->setDeblockingFilterOverrideFlag(true);
+      pcPic->getSlice(i)->setDeblockingFilterDisable( false );
+      pcPic->getSlice(i)->setDeblockingFilterBetaOffsetDiv2(betaOffsetDiv2Best);
+      pcPic->getSlice(i)->setDeblockingFilterTcOffsetDiv2(tcOffsetDiv2Best);
+    }
+  }
+}
+#endif
 
 #if NH_MV
 Void TEncGOP::xSetRefPicListModificationsMv( std::vector<TComPic*> tempPicLists[2], TComSlice* pcSlice, UInt iGOPid )

@@ -3,7 +3,7 @@
  * and contributor rights, including patent rights, and no such rights are
  * granted under this license.
  *
- * Copyright (c) 2010-2015, ITU/ISO/IEC
+ * Copyright (c) 2010-2016, ITU/ISO/IEC
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -123,6 +123,12 @@ Void SEIWriter::xWriteSEIpayloadData(TComBitIf& bs, const SEI& sei, const TComSP
   case SEI::MASTERING_DISPLAY_COLOUR_VOLUME:
     xWriteSEIMasteringDisplayColourVolume(*static_cast<const SEIMasteringDisplayColourVolume*>(&sei));
     break;
+#if U0033_ALTERNATIVE_TRANSFER_CHARACTERISTICS_SEI
+  case SEI::ALTERNATIVE_TRANSFER_CHARACTERISTICS:
+    xWriteSEIAlternativeTransferCharacteristics(*static_cast<const SEIAlternativeTransferCharacteristics*>(&sei));
+    break;
+#endif
+
 #if NH_MV
    case SEI::LAYERS_NOT_PRESENT:
        xWriteSEILayersNotPresent(*static_cast<const SEILayersNotPresent*>(&sei));
@@ -869,6 +875,13 @@ Void SEIWriter::xWriteByteAlign()
     }
   }
 }
+
+#if U0033_ALTERNATIVE_TRANSFER_CHARACTERISTICS_SEI
+Void SEIWriter::xWriteSEIAlternativeTransferCharacteristics(const SEIAlternativeTransferCharacteristics& sei)
+{
+  WRITE_CODE(sei.m_preferredTransferCharacteristics, 8, "preferred_transfer_characteristics");
+}
+#endif
 
 #if NH_MV
 Void SEIWriter::xWriteSEILayersNotPresent(const SEILayersNotPresent& sei)

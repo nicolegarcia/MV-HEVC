@@ -3,7 +3,7 @@
  * and contributor rights, including patent rights, and no such rights are
  * granted under this license.
  *
- * Copyright (c) 2010-2015, ITU/ISO/IEC
+ * Copyright (c) 2010-2016, ITU/ISO/IEC
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -96,6 +96,9 @@ public:
     CHROMA_RESAMPLING_FILTER_HINT        = 140,
     KNEE_FUNCTION_INFO                   = 141,
     COLOUR_REMAPPING_INFO                = 142,
+#if U0033_ALTERNATIVE_TRANSFER_CHARACTERISTICS_SEI
+    ALTERNATIVE_TRANSFER_CHARACTERISTICS = 182,
+#endif
     DEINTERLACED_FIELD_IDENTIFICATION         = 143,
     LAYERS_NOT_PRESENT                        = 160,
     INTER_LAYER_CONSTRAINED_TILE_SETS         = 161,
@@ -654,6 +657,23 @@ public:
   const TileSetData &tileSetData (const Int index) const { return m_tile_set_data[index]; }
 
 };
+
+#if U0033_ALTERNATIVE_TRANSFER_CHARACTERISTICS_SEI
+class SEIAlternativeTransferCharacteristics : public SEI
+{
+public:
+  PayloadType payloadType() const { return ALTERNATIVE_TRANSFER_CHARACTERISTICS; }
+
+  SEIAlternativeTransferCharacteristics() : m_preferredTransferCharacteristics(18)
+  { }
+
+  virtual ~SEIAlternativeTransferCharacteristics() {}
+
+  UInt m_preferredTransferCharacteristics;
+};
+#endif
+
+
 #if NH_MV
 class SEILayersNotPresent : public SEI
 {

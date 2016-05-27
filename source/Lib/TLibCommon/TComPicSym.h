@@ -3,7 +3,7 @@
  * and contributor rights, including patent rights, and no such rights are
  * granted under this license.
  *
- * Copyright (c) 2010-2015, ITU/ISO/IEC
+ * Copyright (c) 2010-2016, ITU/ISO/IEC
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -124,6 +124,8 @@ public:
   Void               destroy ();
 
   TComPicSym  ();
+  ~TComPicSym();
+
   TComSlice*         getSlice(UInt i)                                      { return m_apSlices[i];             }
   const TComSlice*   getSlice(UInt i) const                                { return m_apSlices[i];             }
   UInt               getFrameWidthInCtus() const                           { return m_frameWidthInCtus;            }
